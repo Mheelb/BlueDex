@@ -91,7 +91,7 @@ watch(
         <RouterLink
           :to="session ? { name: 'admin-sets' } : { name: 'admin-login' }"
         >
-          <Button variant="outline" size="lg">Admin</Button>
+          <Button variant="outline" size="lg">Connexion</Button>
         </RouterLink>
       </div>
     </div>

@@ -47,7 +47,7 @@ create table if not exists public.cards (
   ),
 
   constraint cards_rarity_check check (
-    rarity in ('Commune', 'Peu commune', 'Rare', 'Prestige III', 'Prestige II', 'Prestige I')
+    rarity in ('Commune', 'Peu commune', 'Rare', 'Prestige III', 'Prestige II', 'Prestige I', 'Mythique')
   ),
   constraint cards_type_check check (
     type is null or type in ('Personnage', 'Événement', 'Objet', 'Piège', 'Artefact', 'Environnement')
@@ -56,7 +56,7 @@ create table if not exists public.cards (
     subtype is null or subtype in ('Héros', 'Légende', 'Aspirant')
   ),
   constraint cards_faction_check check (
-    faction is null or faction in ('Émissaire', 'Veilleur', 'Gardien')
+    faction is null or faction in ('Émissaire', 'Veilleur', 'Gardien', 'Éclaireur')
   )
 );
 

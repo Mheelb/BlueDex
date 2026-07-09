@@ -2,9 +2,10 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { PencilIcon, PlusIcon, Trash2Icon, UploadIcon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
-import type { Card, CardSet, CardType, Faction, Rarity, Subtype } from '@/types/card'
+import type { Card, CardType, Faction, Rarity, Subtype } from '@/types/card'
 import { CARD_TYPES, FACTIONS, RARITIES, SUBTYPES, createEmptyCardFilters } from '@/types/card'
 import { filterAndSortCards } from '@/lib/filterCards'
+import { useSetBySlug } from '@/composables/useSetBySlug'
 import SelectField from '@/components/SelectField.vue'
 import type { SelectFieldOption } from '@/components/SelectField.vue'
 import BackButton from '@/components/BackButton.vue'
@@ -20,15 +21,31 @@ import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 
 const props = defineProps<{ setSlug: string }>()
 
-const set = ref<CardSet | null>(null)
+const { set, error: setError, loadSet } = useSetBySlug()
 const cards = ref<Card[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const saving = ref(false)
 const imageFile = ref<File | null>(null)
 const editingId = ref<string | null>(null)
+const editingImageUrl = ref<string | null>(null)
 const sheetOpen = ref(false)
 const fieldErrors = ref<Record<string, string>>({})
+
+const CARD_IMAGES_MARKER = '/card-images/'
+
+function storagePathFromUrl(url: string): string | null {
+  const idx = url.indexOf(CARD_IMAGES_MARKER)
+  if (idx === -1) return null
+  return url.slice(idx + CARD_IMAGES_MARKER.length)
+}
+
+async function deleteCardImage(imageUrl: string | null) {
+  if (!imageUrl) return
+  const path = storagePathFromUrl(imageUrl)
+  if (!path) return
+  await supabase.storage.from('card-images').remove([path])
+}
 
 const rarityOptions: SelectFieldOption[] = RARITIES.map((r) => ({ value: r, label: r }))
 const typeOptions: SelectFieldOption[] = CARD_TYPES.map((t) => ({ value: t, label: t }))
@@ -63,18 +80,12 @@ async function load() {
   loading.value = true
   error.value = null
 
-  const { data: setData, error: setError } = await supabase
-    .from('sets')
-    .select('*')
-    .eq('slug', props.setSlug)
-    .single()
-
-  if (setError || !setData) {
-    error.value = setError?.message ?? 'Set introuvable.'
+  const ok = await loadSet(props.setSlug)
+  if (!ok || !set.value) {
+    error.value = setError.value
     loading.value = false
     return
   }
-  set.value = setData as CardSet
 
   const { data: cardsData, error: cardsError } = await supabase
     .from('cards')
@@ -109,6 +120,7 @@ async function syncCardCount() {
 
 function resetForm() {
   editingId.value = null
+  editingImageUrl.value = null
   Object.assign(form, emptyForm())
   imageFile.value = null
   fieldErrors.value = {}
@@ -124,6 +136,7 @@ function openCreateSheet() {
 function openEditSheet(card: Card) {
   resetForm()
   editingId.value = card.id
+  editingImageUrl.value = card.image_url
   form.number = card.number
   form.name = card.name
   form.rarity = card.rarity
@@ -217,6 +230,10 @@ async function onSubmit() {
     return
   }
 
+  if (image_url && editingImageUrl.value) {
+    await deleteCardImage(editingImageUrl.value)
+  }
+
   sheetOpen.value = false
   resetForm()
   await load()
@@ -229,6 +246,7 @@ async function onDelete(card: Card) {
     error.value = deleteError.message
     return
   }
+  await deleteCardImage(card.image_url)
   await load()
   await syncCardCount()
 }

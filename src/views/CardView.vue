@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { supabase } from '@/lib/supabase'
-import type { Card, CardSet } from '@/types/card'
+import type { Card } from '@/types/card'
+import { useSetBySlug } from '@/composables/useSetBySlug'
 import CardImage from '@/components/CardImage.vue'
 import CardBadges from '@/components/CardBadges.vue'
 import CardStatPills from '@/components/CardStatPills.vue'
@@ -11,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 
 const props = defineProps<{ setSlug: string; cardNumber: string }>()
 
-const set = ref<CardSet | null>(null)
+const { set, error: setError, loadSet } = useSetBySlug()
 const card = ref<Card | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -20,18 +21,12 @@ async function load() {
   loading.value = true
   error.value = null
 
-  const { data: setData, error: setError } = await supabase
-    .from('sets')
-    .select('*')
-    .eq('slug', props.setSlug)
-    .single()
-
-  if (setError || !setData) {
-    error.value = setError?.message ?? 'Set introuvable.'
+  const ok = await loadSet(props.setSlug)
+  if (!ok || !set.value) {
+    error.value = setError.value
     loading.value = false
     return
   }
-  set.value = setData as CardSet
 
   const { data: cardData, error: cardError } = await supabase
     .from('cards')

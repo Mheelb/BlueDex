@@ -2,14 +2,10 @@ import { ref, watchEffect } from 'vue'
 
 const STORAGE_KEY = 'bluedex-theme'
 
-function getInitialDark(): boolean {
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored === 'dark') return true
-  if (stored === 'light') return false
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-}
-
-const isDark = ref(getInitialDark())
+// Le bouton pour basculer le thème est masqué pour l'instant : on force le
+// mode clair dans tous les cas, peu importe la préférence système ou une
+// ancienne valeur enregistrée dans ce navigateur.
+const isDark = ref(false)
 
 watchEffect(() => {
   document.documentElement.classList.toggle('dark', isDark.value)

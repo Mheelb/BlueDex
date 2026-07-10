@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useForm } from '@tanstack/vue-form'
 import { PencilIcon, SparklesIcon, Trash2Icon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
 import type { Article } from '@/types/article'
 import { articleKeys, fetchAdminArticles } from '@/queries/articles'
+import { required } from '@/lib/formValidators'
 import BackButton from '@/components/BackButton.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -27,7 +29,6 @@ const { data: articles, isPending: loading } = useQuery({
 const error = ref<string | null>(null)
 const sheetOpen = ref(false)
 const editingId = ref<string | null>(null)
-const fieldErrors = ref<Record<string, string>>({})
 
 function emptyForm() {
   return {
@@ -38,8 +39,6 @@ function emptyForm() {
     cover_image_url: '',
   }
 }
-
-const form = reactive(emptyForm())
 
 const generateMutation = useMutation({
   mutationFn: async () => {
@@ -59,44 +58,16 @@ function onGenerate() {
   generateMutation.mutate()
 }
 
-function resetForm() {
-  editingId.value = null
-  Object.assign(form, emptyForm())
-  fieldErrors.value = {}
-  error.value = null
-}
-
-function openEditSheet(article: Article) {
-  resetForm()
-  editingId.value = article.id
-  form.title = article.title
-  form.slug = article.slug
-  form.excerpt = article.excerpt
-  form.content = article.content
-  form.cover_image_url = article.cover_image_url ?? ''
-  sheetOpen.value = true
-}
-
-function validate(): boolean {
-  const errors: Record<string, string> = {}
-  if (!form.title.trim()) errors.title = 'Le titre est requis.'
-  if (!form.slug.trim()) errors.slug = 'Le slug est requis.'
-  if (!form.excerpt.trim()) errors.excerpt = "L'extrait est requis."
-  if (!form.content.trim()) errors.content = 'Le contenu est requis.'
-  fieldErrors.value = errors
-  return Object.keys(errors).length === 0
-}
-
 const saveMutation = useMutation({
-  mutationFn: async () => {
+  mutationFn: async (value: ReturnType<typeof emptyForm>) => {
     const { error: saveError } = await supabase
       .from('articles')
       .update({
-        title: form.title,
-        slug: form.slug,
-        excerpt: form.excerpt,
-        content: form.content,
-        cover_image_url: form.cover_image_url || null,
+        title: value.title,
+        slug: value.slug,
+        excerpt: value.excerpt,
+        content: value.content,
+        cover_image_url: value.cover_image_url || null,
       })
       .eq('id', editingId.value)
 
@@ -112,11 +83,33 @@ const saveMutation = useMutation({
   },
 })
 
-function onSave() {
-  if (!editingId.value) return
+const form = useForm({
+  defaultValues: emptyForm(),
+  onSubmit: async ({ value }) => {
+    if (!editingId.value) return
+    await saveMutation.mutateAsync(value)
+  },
+})
+
+function resetForm() {
+  editingId.value = null
+  form.reset(emptyForm())
   error.value = null
-  if (!validate()) return
-  saveMutation.mutate()
+}
+
+const validateExcerpt = required("L'extrait est requis.")
+
+function openEditSheet(article: Article) {
+  resetForm()
+  editingId.value = article.id
+  form.reset({
+    title: article.title,
+    slug: article.slug,
+    excerpt: article.excerpt,
+    content: article.content,
+    cover_image_url: article.cover_image_url ?? '',
+  })
+  sheetOpen.value = true
 }
 
 const togglePublishMutation = useMutation({
@@ -215,23 +208,64 @@ function onDelete(article: Article) {
         <SheetTitle>Modifier l'article</SheetTitle>
       </SheetHeader>
 
-      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSave" novalidate>
+      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="() => form.handleSubmit()" novalidate>
         <div class="grid grid-cols-1 gap-3 p-4">
-          <FormField label="Titre" for="article-title" required :error="fieldErrors.title">
-            <Input id="article-title" v-model="form.title" :aria-invalid="!!fieldErrors.title" />
-          </FormField>
-          <FormField label="Slug" for="article-slug" required :error="fieldErrors.slug">
-            <Input id="article-slug" v-model="form.slug" :aria-invalid="!!fieldErrors.slug" />
-          </FormField>
-          <FormField label="Extrait" for="article-excerpt" required :error="fieldErrors.excerpt">
-            <Textarea id="article-excerpt" v-model="form.excerpt" rows="2" :aria-invalid="!!fieldErrors.excerpt" />
-          </FormField>
-          <FormField label="URL de l'image de couverture" for="article-cover">
-            <Input id="article-cover" v-model="form.cover_image_url" placeholder="Optionnel" />
-          </FormField>
-          <FormField label="Contenu (markdown)" for="article-content" required :error="fieldErrors.content">
-            <Textarea id="article-content" v-model="form.content" rows="14" :aria-invalid="!!fieldErrors.content" />
-          </FormField>
+          <form.Field name="title" :validators="{ onChange: required('Le titre est requis.') }" v-slot="{ field }">
+            <FormField label="Titre" for="article-title" required :error="field.state.meta.errors[0]">
+              <Input
+                id="article-title"
+                :model-value="field.state.value"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="slug" :validators="{ onChange: required('Le slug est requis.') }" v-slot="{ field }">
+            <FormField label="Slug" for="article-slug" required :error="field.state.meta.errors[0]">
+              <Input
+                id="article-slug"
+                :model-value="field.state.value"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="excerpt" :validators="{ onChange: validateExcerpt }" v-slot="{ field }">
+            <FormField label="Extrait" for="article-excerpt" required :error="field.state.meta.errors[0]">
+              <Textarea
+                id="article-excerpt"
+                :model-value="field.state.value"
+                rows="2"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="cover_image_url" v-slot="{ field }">
+            <FormField label="URL de l'image de couverture" for="article-cover">
+              <Input
+                id="article-cover"
+                :model-value="field.state.value"
+                placeholder="Optionnel"
+                @update:model-value="(v) => field.handleChange(String(v))"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="content" :validators="{ onChange: required('Le contenu est requis.') }" v-slot="{ field }">
+            <FormField label="Contenu (markdown)" for="article-content" required :error="field.state.meta.errors[0]">
+              <Textarea
+                id="article-content"
+                :model-value="field.state.value"
+                rows="14"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
         </div>
 
         <SheetFooter class="border-t">

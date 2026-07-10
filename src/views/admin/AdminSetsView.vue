@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useForm } from '@tanstack/vue-form'
 import { ImageDownIcon, ListIcon, PencilIcon, PlusIcon, Trash2Icon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
 import type { CardSet } from '@/types/card'
 import { fetchSets, setKeys } from '@/queries/sets'
 import { cardKeys } from '@/queries/cards'
 import { migrateAllCardImages, type MigrationSummary } from '@/lib/imageMigration'
+import { required, slugPattern } from '@/lib/formValidators'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -26,7 +28,6 @@ const { data: sets, isPending: loading } = useQuery({
 
 const error = ref<string | null>(null)
 const sheetOpen = ref(false)
-const fieldErrors = ref<Record<string, string>>({})
 const editingId = ref<string | null>(null)
 
 function emptyForm() {
@@ -39,55 +40,18 @@ function emptyForm() {
   }
 }
 
-const form = reactive(emptyForm())
-
-function resetForm() {
-  editingId.value = null
-  Object.assign(form, emptyForm())
-  fieldErrors.value = {}
-  error.value = null
-}
-
-function openCreateSheet() {
-  resetForm()
-  sheetOpen.value = true
-}
-
-function openEditSheet(set: CardSet) {
-  resetForm()
-  editingId.value = set.id
-  form.name = set.name
-  form.slug = set.slug
-  form.release_date = set.release_date ?? ''
-  form.logo_url = set.logo_url ?? ''
-  form.symbol_url = set.symbol_url ?? ''
-  sheetOpen.value = true
-}
-
-const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
-
-function validate(): boolean {
-  const errors: Record<string, string> = {}
-
-  if (!form.name.trim()) errors.name = 'Le nom est requis.'
-  if (!form.slug.trim()) {
-    errors.slug = 'Le slug est requis.'
-  } else if (!SLUG_PATTERN.test(form.slug)) {
-    errors.slug = 'Uniquement des minuscules, chiffres et tirets (ex: base-set).'
-  }
-
-  fieldErrors.value = errors
-  return Object.keys(errors).length === 0
-}
+const validateSlug = ({ value }: { value: string }) =>
+  required('Le slug est requis.')({ value }) ??
+  slugPattern('Uniquement des minuscules, chiffres et tirets (ex: base-set).')({ value })
 
 const saveMutation = useMutation({
-  mutationFn: async () => {
+  mutationFn: async (value: ReturnType<typeof emptyForm>) => {
     const payload = {
-      name: form.name,
-      slug: form.slug,
-      release_date: form.release_date || null,
-      logo_url: form.logo_url || null,
-      symbol_url: form.symbol_url || null,
+      name: value.name,
+      slug: value.slug,
+      release_date: value.release_date || null,
+      logo_url: value.logo_url || null,
+      symbol_url: value.symbol_url || null,
     }
 
     const { error: saveError } = editingId.value
@@ -106,10 +70,35 @@ const saveMutation = useMutation({
   },
 })
 
-function onSubmit() {
+const form = useForm({
+  defaultValues: emptyForm(),
+  onSubmit: async ({ value }) => {
+    await saveMutation.mutateAsync(value)
+  },
+})
+
+function resetForm() {
+  editingId.value = null
+  form.reset(emptyForm())
   error.value = null
-  if (!validate()) return
-  saveMutation.mutate()
+}
+
+function openCreateSheet() {
+  resetForm()
+  sheetOpen.value = true
+}
+
+function openEditSheet(set: CardSet) {
+  resetForm()
+  editingId.value = set.id
+  form.reset({
+    name: set.name,
+    slug: set.slug,
+    release_date: set.release_date ?? '',
+    logo_url: set.logo_url ?? '',
+    symbol_url: set.symbol_url ?? '',
+  })
+  sheetOpen.value = true
 }
 
 const deleteMutation = useMutation({
@@ -234,23 +223,61 @@ async function onMigrateImages() {
         <SheetTitle>{{ editingId ? 'Modifier le set' : 'Nouveau set' }}</SheetTitle>
       </SheetHeader>
 
-      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSubmit" novalidate>
+      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="() => form.handleSubmit()" novalidate>
         <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
-          <FormField label="Nom" for="set-name" required :error="fieldErrors.name">
-            <Input id="set-name" v-model="form.name" :aria-invalid="!!fieldErrors.name" />
-          </FormField>
-          <FormField label="Slug" for="set-slug" required :error="fieldErrors.slug">
-            <Input id="set-slug" v-model="form.slug" placeholder="ex: base-set" :aria-invalid="!!fieldErrors.slug" />
-          </FormField>
-          <FormField label="Date de sortie" for="set-release">
-            <Input id="set-release" v-model="form.release_date" type="date" />
-          </FormField>
-          <FormField label="URL du logo" for="set-logo">
-            <Input id="set-logo" v-model="form.logo_url" placeholder="Optionnel" />
-          </FormField>
-          <FormField label="URL du symbole" for="set-symbol" class="sm:col-span-2">
-            <Input id="set-symbol" v-model="form.symbol_url" placeholder="Optionnel" />
-          </FormField>
+          <form.Field name="name" :validators="{ onChange: required('Le nom est requis.') }" v-slot="{ field }">
+            <FormField label="Nom" for="set-name" required :error="field.state.meta.errors[0]">
+              <Input
+                id="set-name"
+                :model-value="field.state.value"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="slug" :validators="{ onChange: validateSlug }" v-slot="{ field }">
+            <FormField label="Slug" for="set-slug" required :error="field.state.meta.errors[0]">
+              <Input
+                id="set-slug"
+                :model-value="field.state.value"
+                placeholder="ex: base-set"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="release_date" v-slot="{ field }">
+            <FormField label="Date de sortie" for="set-release">
+              <Input
+                id="set-release"
+                :model-value="field.state.value"
+                type="date"
+                @update:model-value="(v) => field.handleChange(String(v))"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="logo_url" v-slot="{ field }">
+            <FormField label="URL du logo" for="set-logo">
+              <Input
+                id="set-logo"
+                :model-value="field.state.value"
+                placeholder="Optionnel"
+                @update:model-value="(v) => field.handleChange(String(v))"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="symbol_url" v-slot="{ field }">
+            <FormField label="URL du symbole" for="set-symbol" class="sm:col-span-2">
+              <Input
+                id="set-symbol"
+                :model-value="field.state.value"
+                placeholder="Optionnel"
+                @update:model-value="(v) => field.handleChange(String(v))"
+              />
+            </FormField>
+          </form.Field>
         </div>
 
         <SheetFooter class="border-t">

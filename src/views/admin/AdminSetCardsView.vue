@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useForm } from '@tanstack/vue-form'
 import { CopyIcon, PencilIcon, PlusIcon, Trash2Icon, UploadIcon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
 import { convertImageToWebP } from '@/lib/imageCompression'
 import { deleteCardImage, uploadCardImage } from '@/lib/cardImageStorage'
 import type { Card, CardType, Faction, Rarity, Subtype } from '@/types/card'
 import { CARD_TYPES, FACTIONS, RARITIES, SUBTYPES, createEmptyCardFilters } from '@/types/card'
+import { required, optionalNonNegativeNumber } from '@/lib/formValidators'
 import { filterAndSortCards } from '@/lib/filterCards'
 import { useSetBySlug } from '@/composables/useSetBySlug'
 import { cardKeys, fetchCardsBySet } from '@/queries/cards'
@@ -48,7 +50,6 @@ const converting = ref(false)
 const editingId = ref<string | null>(null)
 const editingImageUrl = ref<string | null>(null)
 const sheetOpen = ref(false)
-const fieldErrors = ref<Record<string, string>>({})
 
 async function syncCardCount(count: number) {
   if (!setId.value) return
@@ -83,8 +84,6 @@ function emptyForm() {
   }
 }
 
-const form = reactive(emptyForm())
-
 const filters = ref(createEmptyCardFilters())
 const filteredCards = computed(() => filterAndSortCards(cards.value ?? [], filters.value))
 
@@ -112,9 +111,8 @@ function triggerFileInput() {
 function resetForm() {
   editingId.value = null
   editingImageUrl.value = null
-  Object.assign(form, emptyForm())
+  form.reset(emptyForm())
   imageFile.value = null
-  fieldErrors.value = {}
   error.value = null
   if (fileInputEl.value) fileInputEl.value.value = ''
 }
@@ -128,103 +126,92 @@ function openEditSheet(card: Card) {
   resetForm()
   editingId.value = card.id
   editingImageUrl.value = card.image_url
-  form.number = card.number
-  form.name = card.name
-  form.rarity = card.rarity
-  form.is_holo = card.is_holo
-  form.is_signed = card.is_signed
-  form.is_numbered = card.is_numbered
-  form.numbered_total = card.numbered_total ?? ''
-  form.is_full_art = card.is_full_art
-  form.is_overframe = card.is_overframe
-  form.type = card.type ?? ''
-  form.subtype = card.subtype ?? ''
-  form.faction = card.faction ?? ''
-  form.cost = card.cost ?? ''
-  form.power = card.power ?? ''
-  form.support = card.support ?? ''
-  form.effect = card.effect ?? ''
-  form.artist = card.artist ?? ''
+  form.reset({
+    number: card.number,
+    name: card.name,
+    rarity: card.rarity,
+    is_holo: card.is_holo,
+    is_signed: card.is_signed,
+    is_numbered: card.is_numbered,
+    numbered_total: card.numbered_total ?? '',
+    is_full_art: card.is_full_art,
+    is_overframe: card.is_overframe,
+    type: card.type ?? '',
+    subtype: card.subtype ?? '',
+    faction: card.faction ?? '',
+    cost: card.cost ?? '',
+    power: card.power ?? '',
+    support: card.support ?? '',
+    effect: card.effect ?? '',
+    artist: card.artist ?? '',
+  })
   sheetOpen.value = true
 }
 
 function openDuplicateSheet(card: Card) {
   resetForm()
-  form.name = card.name
-  form.rarity = card.rarity
-  form.is_holo = card.is_holo
-  form.is_signed = card.is_signed
-  form.is_numbered = card.is_numbered
-  form.numbered_total = card.numbered_total ?? ''
-  form.is_full_art = card.is_full_art
-  form.is_overframe = card.is_overframe
-  form.type = card.type ?? ''
-  form.subtype = card.subtype ?? ''
-  form.faction = card.faction ?? ''
-  form.cost = card.cost ?? ''
-  form.power = card.power ?? ''
-  form.support = card.support ?? ''
-  form.effect = card.effect ?? ''
-  form.artist = card.artist ?? ''
+  form.reset({
+    ...emptyForm(),
+    name: card.name,
+    rarity: card.rarity,
+    is_holo: card.is_holo,
+    is_signed: card.is_signed,
+    is_numbered: card.is_numbered,
+    numbered_total: card.numbered_total ?? '',
+    is_full_art: card.is_full_art,
+    is_overframe: card.is_overframe,
+    type: card.type ?? '',
+    subtype: card.subtype ?? '',
+    faction: card.faction ?? '',
+    cost: card.cost ?? '',
+    power: card.power ?? '',
+    support: card.support ?? '',
+    effect: card.effect ?? '',
+    artist: card.artist ?? '',
+  })
   sheetOpen.value = true
 }
 
-function validate(): boolean {
-  const errors: Record<string, string> = {}
+const validateRarity = ({ value }: { value: string }) => (value ? undefined : 'La rareté est requise.')
 
-  if (!form.number.trim()) errors.number = 'Le numéro est requis.'
-  if (!form.name.trim()) errors.name = 'Le nom est requis.'
-  if (!form.rarity) errors.rarity = 'La rareté est requise.'
-  if (form.is_numbered && (form.numbered_total === '' || Number.isNaN(Number(form.numbered_total)) || Number(form.numbered_total) <= 0)) {
-    errors.numbered_total = "Le nombre d'exemplaires doit être un nombre positif."
+function validateNumberedTotal({ value, fieldApi }: { value: string | number; fieldApi: { form: { getFieldValue: (name: string) => unknown } } }) {
+  if (!fieldApi.form.getFieldValue('is_numbered')) return undefined
+  if (value === '' || Number.isNaN(Number(value)) || Number(value) <= 0) {
+    return "Le nombre d'exemplaires doit être un nombre positif."
   }
-
-  const numericFields: Array<['cost' | 'power' | 'support', string]> = [
-    ['cost', 'Le coût'],
-    ['power', 'La puissance'],
-    ['support', 'Le soutien'],
-  ]
-  for (const [key, label] of numericFields) {
-    const value = form[key]
-    if (value !== '' && (Number.isNaN(Number(value)) || Number(value) < 0)) {
-      errors[key] = `${label} doit être un nombre positif.`
-    }
-  }
-
-  fieldErrors.value = errors
-  return Object.keys(errors).length === 0
+  return undefined
 }
 
 const saveMutation = useMutation({
-  mutationFn: async () => {
+  mutationFn: async (value: ReturnType<typeof emptyForm>) => {
     if (!set.value) throw new Error('Set introuvable.')
 
     let image_url: string | undefined
 
     if (imageFile.value) {
-      const path = `${set.value.slug}/${form.number}-${Date.now()}-${imageFile.value.name}`
+      const path = `${set.value.slug}/${value.number}-${Date.now()}-${imageFile.value.name}`
       image_url = await uploadCardImage(path, imageFile.value)
     }
 
     const payload = {
       set_id: set.value.id,
-      number: form.number,
-      name: form.name,
-      rarity: form.rarity,
-      is_holo: form.is_holo,
-      is_signed: form.is_signed,
-      is_numbered: form.is_numbered,
-      numbered_total: form.is_numbered ? Number(form.numbered_total) : null,
-      is_full_art: form.is_full_art,
-      is_overframe: form.is_overframe,
-      type: form.type || null,
-      subtype: form.subtype || null,
-      faction: form.faction || null,
-      cost: form.cost === '' ? null : Number(form.cost),
-      power: form.power === '' ? null : Number(form.power),
-      support: form.support === '' ? null : Number(form.support),
-      effect: form.effect || null,
-      artist: form.artist || null,
+      number: value.number,
+      name: value.name,
+      rarity: value.rarity,
+      is_holo: value.is_holo,
+      is_signed: value.is_signed,
+      is_numbered: value.is_numbered,
+      numbered_total: value.is_numbered ? Number(value.numbered_total) : null,
+      is_full_art: value.is_full_art,
+      is_overframe: value.is_overframe,
+      type: value.type || null,
+      subtype: value.subtype || null,
+      faction: value.faction || null,
+      cost: value.cost === '' ? null : Number(value.cost),
+      power: value.power === '' ? null : Number(value.power),
+      support: value.support === '' ? null : Number(value.support),
+      effect: value.effect || null,
+      artist: value.artist || null,
       ...(image_url ? { image_url } : {}),
     }
 
@@ -254,12 +241,12 @@ const saveMutation = useMutation({
   },
 })
 
-function onSubmit() {
-  error.value = null
-  if (!set.value) return
-  if (!validate()) return
-  saveMutation.mutate()
-}
+const form = useForm({
+  defaultValues: emptyForm(),
+  onSubmit: async ({ value }) => {
+    await saveMutation.mutateAsync(value)
+  },
+})
 
 const deleteMutation = useMutation({
   mutationFn: async (card: Card) => {
@@ -340,96 +327,195 @@ function onDelete(card: Card) {
         <SheetTitle>{{ editingId ? 'Modifier la carte' : 'Nouvelle carte' }}</SheetTitle>
       </SheetHeader>
 
-      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSubmit" novalidate>
+      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="() => form.handleSubmit()" novalidate>
         <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
-          <FormField label="Numéro" for="card-number" required :error="fieldErrors.number">
-            <Input id="card-number" v-model="form.number" :aria-invalid="!!fieldErrors.number" />
-          </FormField>
-          <FormField label="Nom" for="card-name" required :error="fieldErrors.name" class="sm:col-span-2">
-            <Input id="card-name" v-model="form.name" :aria-invalid="!!fieldErrors.name" />
-          </FormField>
+          <form.Field name="number" :validators="{ onChange: required('Le numéro est requis.') }" v-slot="{ field }">
+            <FormField label="Numéro" for="card-number" required :error="field.state.meta.errors[0]">
+              <Input
+                id="card-number"
+                :model-value="field.state.value"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="name" :validators="{ onChange: required('Le nom est requis.') }" v-slot="{ field }">
+            <FormField label="Nom" for="card-name" required :error="field.state.meta.errors[0]" class="sm:col-span-2">
+              <Input
+                id="card-name"
+                :model-value="field.state.value"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
 
-          <FormField label="Rareté" required :error="fieldErrors.rarity" class="sm:col-span-3">
-            <SelectField
-              v-model="form.rarity"
-              :options="rarityOptions"
-              placeholder="Rareté"
-              :class="fieldErrors.rarity ? 'border-destructive ring-destructive/20' : ''"
-            />
-          </FormField>
-          <FormField label="Type" class="sm:col-span-3">
-            <SelectField v-model="form.type" :options="typeOptions" placeholder="Type" />
-          </FormField>
-          <FormField label="Sous-type" class="sm:col-span-3">
-            <SelectField v-model="form.subtype" :options="subtypeOptions" placeholder="Sous-type" />
-          </FormField>
-          <FormField label="Faction" class="sm:col-span-3">
-            <SelectField v-model="form.faction" :options="factionOptions" placeholder="Faction" />
-          </FormField>
+          <form.Field name="rarity" :validators="{ onChange: validateRarity }" v-slot="{ field }">
+            <FormField label="Rareté" required :error="field.state.meta.errors[0]" class="sm:col-span-3">
+              <SelectField
+                :model-value="field.state.value"
+                :options="rarityOptions"
+                placeholder="Rareté"
+                :class="field.state.meta.errors.length > 0 ? 'border-destructive ring-destructive/20' : ''"
+                @update:model-value="(v) => field.handleChange(v as typeof field.state.value)"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="type" v-slot="{ field }">
+            <FormField label="Type" class="sm:col-span-3">
+              <SelectField
+                :model-value="field.state.value"
+                :options="typeOptions"
+                placeholder="Type"
+                @update:model-value="(v) => field.handleChange(v as typeof field.state.value)"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="subtype" v-slot="{ field }">
+            <FormField label="Sous-type" class="sm:col-span-3">
+              <SelectField
+                :model-value="field.state.value"
+                :options="subtypeOptions"
+                placeholder="Sous-type"
+                @update:model-value="(v) => field.handleChange(v as typeof field.state.value)"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="faction" v-slot="{ field }">
+            <FormField label="Faction" class="sm:col-span-3">
+              <SelectField
+                :model-value="field.state.value"
+                :options="factionOptions"
+                placeholder="Faction"
+                @update:model-value="(v) => field.handleChange(v as typeof field.state.value)"
+              />
+            </FormField>
+          </form.Field>
 
-          <FormField label="Coût" for="card-cost" :error="fieldErrors.cost">
-            <Input id="card-cost" v-model="form.cost" type="number" min="0" :aria-invalid="!!fieldErrors.cost" />
-          </FormField>
-          <FormField label="Puissance" for="card-power" :error="fieldErrors.power">
-            <Input id="card-power" v-model="form.power" type="number" min="0" :aria-invalid="!!fieldErrors.power" />
-          </FormField>
-          <FormField label="Soutien" for="card-support" :error="fieldErrors.support">
-            <Input
-              id="card-support"
-              v-model="form.support"
-              type="number"
-              min="0"
-              :aria-invalid="!!fieldErrors.support"
-            />
-          </FormField>
+          <form.Field name="cost" :validators="{ onChange: optionalNonNegativeNumber('Le coût doit être un nombre positif.') }" v-slot="{ field }">
+            <FormField label="Coût" for="card-cost" :error="field.state.meta.errors[0]">
+              <Input
+                id="card-cost"
+                :model-value="field.state.value"
+                type="number"
+                min="0"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(v)"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="power" :validators="{ onChange: optionalNonNegativeNumber('La puissance doit être un nombre positif.') }" v-slot="{ field }">
+            <FormField label="Puissance" for="card-power" :error="field.state.meta.errors[0]">
+              <Input
+                id="card-power"
+                :model-value="field.state.value"
+                type="number"
+                min="0"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(v)"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="support" :validators="{ onChange: optionalNonNegativeNumber('Le soutien doit être un nombre positif.') }" v-slot="{ field }">
+            <FormField label="Soutien" for="card-support" :error="field.state.meta.errors[0]">
+              <Input
+                id="card-support"
+                :model-value="field.state.value"
+                type="number"
+                min="0"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(v)"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
 
-          <FormField label="Effet de la carte" for="card-effect" class="sm:col-span-3">
-            <Textarea id="card-effect" v-model="form.effect" rows="3" />
-          </FormField>
+          <form.Field name="effect" v-slot="{ field }">
+            <FormField label="Effet de la carte" for="card-effect" class="sm:col-span-3">
+              <Textarea
+                id="card-effect"
+                :model-value="field.state.value"
+                rows="3"
+                @update:model-value="(v) => field.handleChange(String(v))"
+              />
+            </FormField>
+          </form.Field>
 
-          <FormField label="Artiste (illustration)" for="card-artist" class="sm:col-span-3">
-            <Input id="card-artist" v-model="form.artist" placeholder="Optionnel" />
-          </FormField>
+          <form.Field name="artist" v-slot="{ field }">
+            <FormField label="Artiste (illustration)" for="card-artist" class="sm:col-span-3">
+              <Input
+                id="card-artist"
+                :model-value="field.state.value"
+                placeholder="Optionnel"
+                @update:model-value="(v) => field.handleChange(String(v))"
+              />
+            </FormField>
+          </form.Field>
 
-          <div class="flex flex-wrap items-center gap-4 sm:col-span-3">
-            <label class="flex items-center gap-2 text-sm">
-              <Checkbox v-model="form.is_holo" />
-              Effet holographique
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <Checkbox v-model="form.is_signed" />
-              Signature
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <Checkbox v-model="form.is_numbered" />
-              Numéroté
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <Checkbox v-model="form.is_full_art" />
-              Full art
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <Checkbox v-model="form.is_overframe" />
-              Overframe
-            </label>
-          </div>
+          <form.Field name="is_numbered" v-slot="{ field: isNumberedField }">
+            <div class="flex flex-wrap items-center gap-4 sm:col-span-3">
+              <form.Field name="is_holo" v-slot="{ field }">
+                <label class="flex items-center gap-2 text-sm">
+                  <Checkbox :model-value="field.state.value" @update:model-value="(v) => field.handleChange(!!v)" />
+                  Effet holographique
+                </label>
+              </form.Field>
+              <form.Field name="is_signed" v-slot="{ field }">
+                <label class="flex items-center gap-2 text-sm">
+                  <Checkbox :model-value="field.state.value" @update:model-value="(v) => field.handleChange(!!v)" />
+                  Signature
+                </label>
+              </form.Field>
+              <label class="flex items-center gap-2 text-sm">
+                <Checkbox
+                  :model-value="isNumberedField.state.value"
+                  @update:model-value="(v) => isNumberedField.handleChange(!!v)"
+                />
+                Numéroté
+              </label>
+              <form.Field name="is_full_art" v-slot="{ field }">
+                <label class="flex items-center gap-2 text-sm">
+                  <Checkbox :model-value="field.state.value" @update:model-value="(v) => field.handleChange(!!v)" />
+                  Full art
+                </label>
+              </form.Field>
+              <form.Field name="is_overframe" v-slot="{ field }">
+                <label class="flex items-center gap-2 text-sm">
+                  <Checkbox :model-value="field.state.value" @update:model-value="(v) => field.handleChange(!!v)" />
+                  Overframe
+                </label>
+              </form.Field>
+            </div>
 
-          <FormField
-            v-if="form.is_numbered"
-            label="Nombre d'exemplaires"
-            required
-            for="card-numbered-total"
-            :error="fieldErrors.numbered_total"
-            class="sm:col-span-3"
-          >
-            <Input
-              id="card-numbered-total"
-              v-model="form.numbered_total"
-              type="number"
-              min="1"
-              :aria-invalid="!!fieldErrors.numbered_total"
-            />
-          </FormField>
+            <form.Field
+              v-if="isNumberedField.state.value"
+              name="numbered_total"
+              :validators="{ onChange: validateNumberedTotal, onChangeListenTo: ['is_numbered'] }"
+              v-slot="{ field }"
+            >
+              <FormField
+                label="Nombre d'exemplaires"
+                required
+                for="card-numbered-total"
+                :error="field.state.meta.errors[0]"
+                class="sm:col-span-3"
+              >
+                <Input
+                  id="card-numbered-total"
+                  :model-value="field.state.value"
+                  type="number"
+                  min="1"
+                  :aria-invalid="field.state.meta.errors.length > 0"
+                  @update:model-value="(v) => field.handleChange(v)"
+                  @blur="field.handleBlur"
+                />
+              </FormField>
+            </form.Field>
+          </form.Field>
 
           <FormField
             :label="`Image scannée${editingId ? ' (laisser vide pour garder l’actuelle)' : ' (optionnel)'}`"

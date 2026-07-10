@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { PencilIcon, PlusIcon, Trash2Icon } from '@lucide/vue'
+import { ListIcon, PencilIcon, PlusIcon, Trash2Icon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
 import type { CardSet } from '@/types/card'
 import { Card, CardContent } from '@/components/ui/card'
@@ -20,6 +20,7 @@ const error = ref<string | null>(null)
 const saving = ref(false)
 const sheetOpen = ref(false)
 const fieldErrors = ref<Record<string, string>>({})
+const editingId = ref<string | null>(null)
 
 function emptyForm() {
   return {
@@ -47,6 +48,7 @@ async function load() {
 onMounted(load)
 
 function resetForm() {
+  editingId.value = null
   Object.assign(form, emptyForm())
   fieldErrors.value = {}
   error.value = null
@@ -54,6 +56,17 @@ function resetForm() {
 
 function openCreateSheet() {
   resetForm()
+  sheetOpen.value = true
+}
+
+function openEditSheet(set: CardSet) {
+  resetForm()
+  editingId.value = set.id
+  form.name = set.name
+  form.slug = set.slug
+  form.release_date = set.release_date ?? ''
+  form.logo_url = set.logo_url ?? ''
+  form.symbol_url = set.symbol_url ?? ''
   sheetOpen.value = true
 }
 
@@ -73,25 +86,28 @@ function validate(): boolean {
   return Object.keys(errors).length === 0
 }
 
-async function onCreate() {
+async function onSubmit() {
   if (!validate()) return
 
   saving.value = true
   error.value = null
 
-  const { error: insertError } = await supabase.from('sets').insert({
+  const payload = {
     name: form.name,
     slug: form.slug,
     release_date: form.release_date || null,
     logo_url: form.logo_url || null,
     symbol_url: form.symbol_url || null,
-    card_count: 0,
-  })
+  }
+
+  const { error: saveError } = editingId.value
+    ? await supabase.from('sets').update(payload).eq('id', editingId.value)
+    : await supabase.from('sets').insert({ ...payload, card_count: 0 })
 
   saving.value = false
 
-  if (insertError) {
-    error.value = insertError.message
+  if (saveError) {
+    error.value = saveError.message
     return
   }
 
@@ -109,10 +125,6 @@ async function onDelete(set: CardSet) {
   await load()
 }
 
-async function onLogout() {
-  await supabase.auth.signOut()
-  router.push({ name: 'admin-login' })
-}
 </script>
 
 <template>
@@ -124,7 +136,6 @@ async function onLogout() {
           <PlusIcon />
           Ajouter un set
         </Button>
-        <Button variant="ghost" size="sm" @click="onLogout">Se déconnecter</Button>
       </div>
     </div>
 
@@ -143,8 +154,11 @@ async function onLogout() {
           <div class="flex items-center gap-1">
             <Button as-child variant="ghost" size="icon">
               <RouterLink :to="{ name: 'admin-set-cards', params: { setSlug: set.slug } }" title="Gérer les cartes">
-                <PencilIcon />
+                <ListIcon />
               </RouterLink>
+            </Button>
+            <Button variant="ghost" size="icon" title="Modifier le set" @click="openEditSheet(set)">
+              <PencilIcon />
             </Button>
             <ConfirmDeleteDialog
               :title="`Supprimer le set « ${set.name} » ?`"
@@ -163,10 +177,10 @@ async function onLogout() {
     <Sheet v-model:open="sheetOpen">
       <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
         <SheetHeader class="border-b">
-          <SheetTitle>Nouveau set</SheetTitle>
+          <SheetTitle>{{ editingId ? 'Modifier le set' : 'Nouveau set' }}</SheetTitle>
         </SheetHeader>
 
-        <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onCreate" novalidate>
+        <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSubmit" novalidate>
           <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
             <div class="flex flex-col gap-1.5">
               <Label for="set-name">Nom *</Label>
@@ -196,7 +210,7 @@ async function onLogout() {
             <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
             <div class="flex gap-3">
               <Button type="submit" :disabled="saving">
-                {{ saving ? 'Création...' : 'Créer le set' }}
+                {{ saving ? 'Enregistrement...' : editingId ? 'Mettre à jour le set' : 'Créer le set' }}
               </Button>
               <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
             </div>

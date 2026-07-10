@@ -31,6 +31,8 @@ create table if not exists public.cards (
   is_signed  boolean not null default false,
   is_numbered      boolean not null default false,
   numbered_total   integer,
+  is_full_art      boolean not null default false,
+  is_overframe     boolean not null default false,
   type       text,
   subtype    text,
   faction    text,
@@ -38,6 +40,7 @@ create table if not exists public.cards (
   power      integer,
   support    integer,
   effect     text,
+  artist     text,
   created_at timestamptz not null default now(),
 
   unique (set_id, number),
@@ -47,7 +50,7 @@ create table if not exists public.cards (
   ),
 
   constraint cards_rarity_check check (
-    rarity in ('Commune', 'Peu commune', 'Rare', 'Prestige III', 'Prestige II', 'Prestige I')
+    rarity in ('Commune', 'Peu commune', 'Rare', 'Prestige III', 'Prestige II', 'Prestige I', 'Mythique')
   ),
   constraint cards_type_check check (
     type is null or type in ('Personnage', 'Événement', 'Objet', 'Piège', 'Artefact', 'Environnement')
@@ -56,7 +59,7 @@ create table if not exists public.cards (
     subtype is null or subtype in ('Héros', 'Légende', 'Aspirant')
   ),
   constraint cards_faction_check check (
-    faction is null or faction in ('Émissaire', 'Veilleur', 'Gardien')
+    faction is null or faction in ('Émissaire', 'Veilleur', 'Gardien', 'Éclaireur')
   )
 );
 
@@ -89,6 +92,40 @@ create policy "Public read access on cards"
 
 create policy "Authenticated write access on cards"
   on public.cards for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+-- ---------------------------------------------------------------------------
+-- Table: articles (contenu généré, brouillon -> publication manuelle)
+-- ---------------------------------------------------------------------------
+create table if not exists public.articles (
+  id              uuid primary key default gen_random_uuid(),
+  slug            text not null unique,
+  title           text not null,
+  excerpt         text not null,
+  content         text not null,
+  cover_image_url text,
+  status          text not null default 'draft',
+  created_at      timestamptz not null default now(),
+  published_at    timestamptz,
+
+  constraint articles_status_check check (status in ('draft', 'published'))
+);
+
+create index if not exists articles_status_idx on public.articles (status);
+
+alter table public.articles enable row level security;
+
+create policy "Public read access on published articles"
+  on public.articles for select
+  using (status = 'published');
+
+create policy "Authenticated read access on all articles"
+  on public.articles for select
+  using (auth.role() = 'authenticated');
+
+create policy "Authenticated write access on articles"
+  on public.articles for all
   using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');
 

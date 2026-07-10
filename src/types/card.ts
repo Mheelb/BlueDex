@@ -15,6 +15,7 @@ export const RARITIES = [
   'Prestige III',
   'Prestige II',
   'Prestige I',
+  'Mythique',
 ] as const
 export type Rarity = (typeof RARITIES)[number]
 
@@ -37,7 +38,7 @@ export const TYPE_COLORS: Record<CardType, { bg: string; text: string }> = {
   Objet: { bg: '#95488E', text: '#ffffff' },
 }
 
-export const FACTIONS = ['Émissaire', 'Veilleur', 'Gardien'] as const
+export const FACTIONS = ['Émissaire', 'Veilleur', 'Gardien', 'Éclaireur'] as const
 export type Faction = (typeof FACTIONS)[number]
 
 export const SUBTYPES = ['Héros', 'Légende', 'Aspirant'] as const
@@ -54,6 +55,8 @@ export interface Card {
   is_signed: boolean
   is_numbered: boolean
   numbered_total: number | null
+  is_full_art: boolean
+  is_overframe: boolean
   type: CardType | null
   subtype: Subtype | null
   faction: Faction | null
@@ -61,6 +64,7 @@ export interface Card {
   power: number | null
   support: number | null
   effect: string | null
+  artist: string | null
 }
 
 export type CardSort = 'number-asc' | 'number-desc' | 'name-asc' | 'name-desc'

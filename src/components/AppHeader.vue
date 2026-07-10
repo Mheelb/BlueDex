@@ -1,20 +1,46 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { MoonIcon, SunIcon } from '@lucide/vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { LayoutDashboardIcon, LogOutIcon, MoonIcon, NewspaperIcon, SunIcon } from '@lucide/vue'
 import { useAuthUser } from '@/composables/useAuthUser'
 import { useDarkMode } from '@/composables/useDarkMode'
+import { supabase } from '@/lib/supabase'
 import Button from './ui/button/Button.vue'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const { session } = useAuthUser()
 const { isDark, toggle } = useDarkMode()
+const router = useRouter()
+
+const userInitials = computed(() => {
+  const email = session.value?.user.email ?? ''
+  return email.slice(0, 2).toUpperCase() || '?'
+})
+
+async function onLogout() {
+  await supabase.auth.signOut()
+  router.push({ name: 'home' })
+}
 
 const route = useRoute()
 
 const tabs = [
-  { name: 'sets', label: 'Sets' },
-  { name: 'deck-builder', label: 'Deck Builder' },
+  { name: 'sets', label: 'Sets', matchPrefix: '/sets' },
+  { name: 'deck-builder', label: 'Deck Builder', matchPrefix: '/decks' },
+  { name: 'articles', label: 'Actus', matchPrefix: '/actus' },
 ]
+
+function isTabActive(tab: (typeof tabs)[number]) {
+  return route.path.startsWith(tab.matchPrefix)
+}
 
 const tabRefs = ref<(HTMLElement | null)[]>([])
 
@@ -25,7 +51,7 @@ function setTabRef(el: Element | null, index: number) {
 const indicatorStyle = ref({ width: '0px', transform: 'translateX(0px)', opacity: 0 })
 
 function updateIndicator() {
-  const index = tabs.findIndex((tab) => tab.name === route.name)
+  const index = tabs.findIndex((tab) => isTabActive(tab))
   const el = tabRefs.value[index]
 
   indicatorStyle.value = el
@@ -44,7 +70,7 @@ onUnmounted(() => {
 })
 
 watch(
-  () => route.name,
+  () => route.path,
   async () => {
     await nextTick()
     updateIndicator()
@@ -53,7 +79,7 @@ watch(
 </script>
 
 <template>
-  <header class="sticky top-0 z-20 bg-background/70 backdrop-blur-md">
+  <header class="sticky top-0 z-20">
     <div class="flex items-center justify-between px-4 py-3 sm:px-6 lg:px-10">
       <RouterLink :to="{ name: 'home' }" class="text-xl font-bold tracking-tight text-foreground">
         BlueDex
@@ -68,7 +94,7 @@ watch(
           <RouterLink
             :to="{ name: tab.name }"
             class="block rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
-            :class="route.name === tab.name ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+            :class="isTabActive(tab) ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
           >
             {{ tab.label }}
           </RouterLink>
@@ -88,9 +114,39 @@ watch(
           <MoonIcon v-else />
         </Button>
 
-        <RouterLink
-          :to="session ? { name: 'admin-sets' } : { name: 'admin-login' }"
-        >
+        <DropdownMenu v-if="session">
+          <DropdownMenuTrigger as-child>
+            <button class="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <Avatar>
+                <AvatarFallback class="bg-primary text-primary-foreground">{{ userInitials }}</AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" class="w-56">
+            <DropdownMenuLabel class="truncate font-normal text-muted-foreground">
+              {{ session.user.email }}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem as-child>
+              <RouterLink :to="{ name: 'admin-sets' }">
+                <LayoutDashboardIcon />
+                Dashboard
+              </RouterLink>
+            </DropdownMenuItem>
+            <DropdownMenuItem as-child>
+              <RouterLink :to="{ name: 'admin-articles' }">
+                <NewspaperIcon />
+                Articles
+              </RouterLink>
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" @click="onLogout">
+              <LogOutIcon />
+              Déconnexion
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <RouterLink v-else :to="{ name: 'admin-login' }">
           <Button variant="outline" size="lg">Connexion</Button>
         </RouterLink>
       </div>

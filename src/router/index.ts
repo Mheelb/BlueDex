@@ -20,6 +20,17 @@ const router = createRouter({
       component: () => import('@/views/DeckBuilderView.vue'),
     },
     {
+      path: '/actus',
+      name: 'articles',
+      component: () => import('@/views/ArticlesView.vue'),
+    },
+    {
+      path: '/actus/:slug',
+      name: 'article',
+      component: () => import('@/views/ArticleView.vue'),
+      props: true,
+    },
+    {
       path: '/sets/:setSlug',
       name: 'set',
       component: () => import('@/views/SetView.vue'),
@@ -47,11 +58,16 @@ const router = createRouter({
       component: () => import('@/views/admin/AdminSetCardsView.vue'),
       props: true,
     },
+    {
+      path: '/admin/articles',
+      name: 'admin-articles',
+      component: () => import('@/views/admin/AdminArticlesView.vue'),
+    },
   ],
 })
 
 router.beforeEach(async (to) => {
-  const requiresAuth = to.name === 'admin-sets' || to.name === 'admin-set-cards'
+  const requiresAuth = to.name === 'admin-sets' || to.name === 'admin-set-cards' || to.name === 'admin-articles'
   if (!requiresAuth) return true
 
   const { data } = await supabase.auth.getSession()

@@ -3,6 +3,8 @@ import { computed, reactive, ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { CopyIcon, PencilIcon, PlusIcon, Trash2Icon, UploadIcon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
+import { convertImageToWebP } from '@/lib/imageCompression'
+import { deleteCardImage, uploadCardImage } from '@/lib/cardImageStorage'
 import type { Card, CardType, Faction, Rarity, Subtype } from '@/types/card'
 import { CARD_TYPES, FACTIONS, RARITIES, SUBTYPES, createEmptyCardFilters } from '@/types/card'
 import { filterAndSortCards } from '@/lib/filterCards'
@@ -42,25 +44,11 @@ const loadError = computed(() => setError.value?.message ?? cardsError.value?.me
 
 const error = ref<string | null>(null)
 const imageFile = ref<File | null>(null)
+const converting = ref(false)
 const editingId = ref<string | null>(null)
 const editingImageUrl = ref<string | null>(null)
 const sheetOpen = ref(false)
 const fieldErrors = ref<Record<string, string>>({})
-
-const CARD_IMAGES_MARKER = '/card-images/'
-
-function storagePathFromUrl(url: string): string | null {
-  const idx = url.indexOf(CARD_IMAGES_MARKER)
-  if (idx === -1) return null
-  return url.slice(idx + CARD_IMAGES_MARKER.length)
-}
-
-async function deleteCardImage(imageUrl: string | null) {
-  if (!imageUrl) return
-  const path = storagePathFromUrl(imageUrl)
-  if (!path) return
-  await supabase.storage.from('card-images').remove([path])
-}
 
 async function syncCardCount(count: number) {
   if (!setId.value) return
@@ -102,8 +90,19 @@ const filteredCards = computed(() => filterAndSortCards(cards.value ?? [], filte
 
 const fileInputEl = ref<HTMLInputElement | null>(null)
 
-function onFileChange(event: Event) {
-  imageFile.value = (event.target as HTMLInputElement).files?.[0] ?? null
+async function onFileChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0] ?? null
+  if (!file) {
+    imageFile.value = null
+    return
+  }
+
+  converting.value = true
+  try {
+    imageFile.value = await convertImageToWebP(file)
+  } finally {
+    converting.value = false
+  }
 }
 
 function triggerFileInput() {
@@ -204,9 +203,7 @@ const saveMutation = useMutation({
 
     if (imageFile.value) {
       const path = `${set.value.slug}/${form.number}-${Date.now()}-${imageFile.value.name}`
-      const { error: uploadError } = await supabase.storage.from('card-images').upload(path, imageFile.value)
-      if (uploadError) throw new Error(uploadError.message)
-      image_url = supabase.storage.from('card-images').getPublicUrl(path).data.publicUrl
+      image_url = await uploadCardImage(path, imageFile.value)
     }
 
     const payload = {
@@ -440,12 +437,12 @@ function onDelete(card: Card) {
           >
             <input ref="fileInputEl" type="file" accept="image/*" class="hidden" @change="onFileChange" />
             <div class="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" @click="triggerFileInput">
+              <Button type="button" variant="outline" size="sm" :disabled="converting" @click="triggerFileInput">
                 <UploadIcon />
                 Importer
               </Button>
               <span class="truncate text-sm text-muted-foreground">
-                {{ imageFile?.name ?? 'Aucun fichier sélectionné' }}
+                {{ converting ? 'Compression...' : imageFile?.name ?? 'Aucun fichier sélectionné' }}
               </span>
             </div>
           </FormField>
@@ -454,7 +451,7 @@ function onDelete(card: Card) {
         <SheetFooter class="border-t">
           <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
           <div class="flex gap-3">
-            <Button type="submit" :disabled="saveMutation.isPending.value">
+            <Button type="submit" :disabled="saveMutation.isPending.value || converting">
               {{ saveMutation.isPending.value ? 'Enregistrement...' : editingId ? 'Mettre à jour la carte' : 'Ajouter la carte' }}
             </Button>
             <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>

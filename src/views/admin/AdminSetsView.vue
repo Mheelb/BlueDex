@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { ListIcon, PencilIcon, PlusIcon, Trash2Icon } from '@lucide/vue'
+import { ImageDownIcon, ListIcon, PencilIcon, PlusIcon, Trash2Icon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
 import type { CardSet } from '@/types/card'
 import { fetchSets, setKeys } from '@/queries/sets'
+import { cardKeys } from '@/queries/cards'
+import { migrateAllCardImages, type MigrationSummary } from '@/lib/imageMigration'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -126,15 +128,71 @@ const deleteMutation = useMutation({
 function onDelete(set: CardSet) {
   deleteMutation.mutate(set)
 }
+
+const migrating = ref(false)
+const migrationProgress = reactive({ done: 0, total: 0 })
+const migrationSummary = ref<MigrationSummary | null>(null)
+const migrationError = ref<string | null>(null)
+
+function formatKb(bytes: number) {
+  return `${(bytes / 1024).toFixed(0)} Ko`
+}
+
+async function onMigrateImages() {
+  if (migrating.value) return
+
+  migrating.value = true
+  migrationError.value = null
+  migrationSummary.value = null
+  migrationProgress.done = 0
+  migrationProgress.total = 0
+
+  try {
+    const summary = await migrateAllCardImages((progress) => {
+      migrationProgress.done = progress.done
+      migrationProgress.total = progress.total
+    })
+    migrationSummary.value = summary
+    queryClient.invalidateQueries({ queryKey: cardKeys.all })
+  } catch (err) {
+    migrationError.value = (err as Error).message
+  } finally {
+    migrating.value = false
+  }
+}
 </script>
 
 <template>
   <PageHeader title="Admin · Sets">
-    <Button @click="openCreateSheet">
-      <PlusIcon />
-      Ajouter un set
-    </Button>
+    <div class="flex gap-2">
+      <ConfirmDeleteDialog
+        title="Optimiser toutes les images ?"
+        description="Recompresse les images de cartes en WebP directement dans Supabase. Les fichiers d'origine seront supprimés du bucket une fois remplacés. Ça peut prendre plusieurs minutes selon le nombre de cartes."
+        confirm-label="Optimiser"
+        variant="default"
+        @confirm="onMigrateImages"
+      >
+        <Button variant="outline" :disabled="migrating">
+          <ImageDownIcon />
+          {{ migrating ? 'Optimisation en cours...' : 'Optimiser les images' }}
+        </Button>
+      </ConfirmDeleteDialog>
+      <Button @click="openCreateSheet">
+        <PlusIcon />
+        Ajouter un set
+      </Button>
+    </div>
   </PageHeader>
+
+  <div v-if="migrating" class="mb-4 text-sm text-muted-foreground">
+    {{ migrationProgress.done }} / {{ migrationProgress.total }} images traitées...
+  </div>
+  <p v-else-if="migrationError" class="mb-4 text-sm text-destructive">{{ migrationError }}</p>
+  <div v-else-if="migrationSummary" class="mb-4 text-sm text-muted-foreground">
+    {{ migrationSummary.optimizedCount }} image(s) optimisée(s), {{ formatKb(migrationSummary.bytesSaved) }}
+    économisés · {{ migrationSummary.skippedCount }} déjà optimales
+    <span v-if="migrationSummary.errorCount"> · {{ migrationSummary.errorCount }} erreur(s)</span>
+  </div>
 
   <QueryState :loading="loading" :empty="sets?.length === 0" empty-message="Aucun set pour le moment.">
     <div class="flex flex-col gap-3">

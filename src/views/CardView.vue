@@ -10,6 +10,7 @@ import CardEffectText from '@/components/CardEffectText.vue'
 import BackButton from '@/components/BackButton.vue'
 import { Badge } from '@/components/ui/badge'
 import QueryState from '@/components/QueryState.vue'
+import Heading from '@/components/Heading.vue'
 
 const props = defineProps<{ setSlug: string; cardNumber: string }>()
 
@@ -51,7 +52,7 @@ const error = computed(() => setError.value?.message ?? cardError.value?.message
             <Badge v-if="card.is_overframe" variant="secondary">Overframe</Badge>
           </div>
 
-          <h1 class="text-3xl font-bold">{{ card.name }}</h1>
+          <Heading>{{ card.name }}</Heading>
           <p class="mt-1 text-sm text-muted-foreground">{{ set.name }} · #{{ card.number }}</p>
 
           <CardBadges :card="card" class="mt-4" />

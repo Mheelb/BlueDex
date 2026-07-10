@@ -10,6 +10,8 @@ import { cardKeys, fetchFeaturedCards } from '@/queries/cards'
 import HomeHero from '@/components/HomeHero.vue'
 import SetCard from '@/components/SetCard.vue'
 import QueryState from '@/components/QueryState.vue'
+import Heading from '@/components/Heading.vue'
+import TextLink from '@/components/TextLink.vue'
 
 const { data: sets, isPending: loading, error } = useQuery({
   queryKey: setKeys.list('release_date'),
@@ -74,10 +76,10 @@ function goToArticleSlide(index: number) {
     <div>
       <div v-if="(latestArticles ?? []).length > 0" class="mb-10">
         <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold">À la une</h2>
-          <RouterLink :to="{ name: 'articles' }" class="text-sm text-primary hover:underline">
+          <Heading as="h2" size="lg">À la une</Heading>
+          <TextLink :to="{ name: 'articles' }" variant="primary">
             Tous les articles
-          </RouterLink>
+          </TextLink>
         </div>
 
         <Carousel
@@ -135,7 +137,7 @@ function goToArticleSlide(index: number) {
         </div>
       </div>
 
-      <h2 class="mb-4 text-lg font-semibold">Sets</h2>
+      <Heading as="h2" size="lg" class="mb-4">Sets</Heading>
 
       <Carousel
         :opts="{ loop: true, align: 'start' }"

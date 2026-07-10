@@ -2,6 +2,7 @@
 import type { Card } from '@/types/card'
 import CardImage from '@/components/CardImage.vue'
 import { Button } from '@/components/ui/button'
+import Heading from '@/components/Heading.vue'
 
 defineProps<{
   featuredCards: Card[]
@@ -36,7 +37,7 @@ function fanStyle(index: number) {
     <div class="grid grid-cols-1 items-center gap-8 px-6 py-14 sm:px-12 sm:py-16 lg:grid-cols-[1.1fr_0.9fr]">
       <div>
         <p class="text-xs font-semibold tracking-[0.2em] text-blue-400 uppercase">TCG · Blue Rising</p>
-        <h1 class="mt-3 text-5xl font-extrabold tracking-tight text-white sm:text-6xl">BlueDex</h1>
+        <Heading size="hero" class="mt-3 text-white sm:text-6xl">BlueDex</Heading>
         <p class="mt-4 max-w-md text-zinc-400">
           {{ totalCards }} cartes répertoriées. Explore la collection, repère les holos, construis ton deck.
         </p>

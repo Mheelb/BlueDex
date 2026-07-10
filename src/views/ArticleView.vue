@@ -5,6 +5,7 @@ import { renderMarkdown } from '@/lib/markdown'
 import { articleKeys, fetchArticleBySlug } from '@/queries/articles'
 import BackButton from '@/components/BackButton.vue'
 import QueryState from '@/components/QueryState.vue'
+import Heading from '@/components/Heading.vue'
 
 const props = defineProps<{ slug: string }>()
 
@@ -27,7 +28,7 @@ function formatDate(date: string | null) {
       <BackButton :to="{ name: 'articles' }" label="Retour aux actus" class="mb-6" />
 
       <p class="text-sm text-muted-foreground">{{ formatDate(article.published_at) }}</p>
-      <h1 class="mt-1 text-3xl font-bold">{{ article.title }}</h1>
+      <Heading class="mt-1">{{ article.title }}</Heading>
 
       <img
         v-if="article.cover_image_url"

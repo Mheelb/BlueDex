@@ -3,6 +3,7 @@ import { NewspaperIcon } from '@lucide/vue'
 import { useQuery } from '@tanstack/vue-query'
 import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
 import QueryState from '@/components/QueryState.vue'
+import Heading from '@/components/Heading.vue'
 
 const { data: articles, isPending: loading, error } = useQuery({
   queryKey: articleKeys.published(),
@@ -16,7 +17,7 @@ function formatDate(date: string | null) {
 </script>
 
 <template>
-  <h1 class="text-3xl font-bold">Actus</h1>
+  <Heading>Actus</Heading>
   <p class="mt-1 text-sm text-muted-foreground">Cartes, factions, decks : les derniers articles autour de Blue Rising.</p>
 
   <QueryState
@@ -47,7 +48,7 @@ function formatDate(date: string | null) {
 
         <div class="min-w-0">
           <p class="text-xs text-muted-foreground">{{ formatDate(article.published_at) }}</p>
-          <h2 class="mt-1 text-lg font-semibold group-hover:underline">{{ article.title }}</h2>
+          <Heading as="h2" size="lg" class="mt-1 group-hover:underline">{{ article.title }}</Heading>
           <p class="mt-1 line-clamp-2 text-sm text-muted-foreground">{{ article.excerpt }}</p>
         </div>
       </RouterLink>

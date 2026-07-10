@@ -9,6 +9,7 @@ import CardFilters from '@/components/CardFilters.vue'
 import CardTile from '@/components/CardTile.vue'
 import BackButton from '@/components/BackButton.vue'
 import QueryState from '@/components/QueryState.vue'
+import Heading from '@/components/Heading.vue'
 
 const props = defineProps<{ setSlug: string }>()
 
@@ -39,7 +40,7 @@ const filteredCards = computed(() => filterAndSortCards(cards.value ?? [], filte
       <div class="mb-6 flex items-center gap-4">
         <img v-if="set.symbol_url" :src="set.symbol_url" :alt="set.name" class="h-10 w-10 object-contain" />
         <div>
-          <h1 class="text-3xl font-bold">{{ set.name }}</h1>
+          <Heading>{{ set.name }}</Heading>
           <p class="mt-0.5 text-sm text-muted-foreground">{{ filteredCards.length }} / {{ (cards ?? []).length }} cartes</p>
         </div>
       </div>

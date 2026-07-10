@@ -73,11 +73,15 @@ function goToArticleSlide(index: number) {
   <HomeHero :featured-cards="featuredCards ?? []" :featured-set-slug="featuredSetSlug" :total-cards="totalCards" />
 
   <QueryState :loading="loading" :error="error?.message" :empty="sets?.length === 0" empty-message="Aucun set pour le moment.">
-    <div>
-      <div v-if="(latestArticles ?? []).length > 0" class="mb-10">
-        <div class="mb-4 flex items-center justify-between">
-          <Heading as="h2" size="lg">À la une</Heading>
-          <TextLink :to="{ name: 'articles' }" variant="primary">
+    <div class="rounded-md border border-primary/30 bg-card p-6 sm:p-9">
+      <div v-if="(latestArticles ?? []).length > 0" class="mb-9 border-b border-primary/20 pb-9">
+        <div class="mb-5 flex items-center justify-between">
+          <Heading as="h2" size="lg" class="font-engraved text-foreground">À la une</Heading>
+          <TextLink
+            :to="{ name: 'articles' }"
+            variant="primary"
+            class="font-engraved text-xs font-bold tracking-[0.05em] text-gold-bright uppercase"
+          >
             Tous les articles
           </TextLink>
         </div>
@@ -88,7 +92,7 @@ function goToArticleSlide(index: number) {
           class="w-full"
           @init-api="onArticlesInitApi"
         >
-          <CarouselContent>
+          <CarouselContent class="pt-2">
             <CarouselItem
               v-for="(article, index) in latestArticles ?? []"
               :key="article.id"
@@ -96,10 +100,10 @@ function goToArticleSlide(index: number) {
             >
               <RouterLink
                 :to="{ name: 'article', params: { slug: article.slug } }"
-                class="group block overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md"
+                class="group block overflow-hidden rounded-md border border-primary/25 bg-secondary transition-shadow hover:shadow-md"
               >
-                <div class="relative aspect-video overflow-hidden bg-gradient-to-br from-primary to-primary/70">
-                  <Badge v-if="index === 0" class="absolute top-3 right-3 z-10 bg-white text-primary">
+                <div class="relative aspect-video overflow-hidden bg-gradient-to-br from-secondary to-background">
+                  <Badge v-if="index === 0" class="absolute top-3 right-3 z-10 bg-accent text-accent-foreground">
                     Nouveau
                   </Badge>
                   <img
@@ -110,7 +114,7 @@ function goToArticleSlide(index: number) {
                   />
                 </div>
                 <div class="p-3">
-                  <p class="line-clamp-1 font-medium group-hover:underline">{{ article.title }}</p>
+                  <p class="line-clamp-1 font-medium text-foreground group-hover:underline">{{ article.title }}</p>
                   <p class="mt-1 line-clamp-2 text-xs text-muted-foreground">{{ article.excerpt }}</p>
                 </div>
               </RouterLink>
@@ -119,7 +123,7 @@ function goToArticleSlide(index: number) {
         </Carousel>
 
         <div v-if="(latestArticles ?? []).length > 1" class="mt-4 flex justify-center">
-          <div class="flex items-center gap-2 rounded-full border bg-card px-3 py-2 shadow-sm">
+          <div class="flex items-center gap-2 rounded-full border border-primary/30 bg-secondary px-3 py-2">
             <button
               v-for="(article, index) in latestArticles ?? []"
               :key="article.id"
@@ -130,14 +134,14 @@ function goToArticleSlide(index: number) {
             >
               <span
                 class="size-2.5 rounded-full transition-colors"
-                :class="articlesSelectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
+                :class="articlesSelectedIndex === index ? 'bg-gold-bright' : 'bg-primary/25'"
               />
             </button>
           </div>
         </div>
       </div>
 
-      <Heading as="h2" size="lg" class="mb-4">Sets</Heading>
+      <Heading as="h2" size="lg" class="mb-5 font-engraved text-foreground">Sets</Heading>
 
       <Carousel
         :opts="{ loop: true, align: 'start' }"
@@ -145,7 +149,7 @@ function goToArticleSlide(index: number) {
         class="w-full"
         @init-api="onSetsInitApi"
       >
-        <CarouselContent>
+        <CarouselContent class="pt-2">
           <CarouselItem
             v-for="set in sets ?? []"
             :key="set.id"
@@ -157,7 +161,7 @@ function goToArticleSlide(index: number) {
       </Carousel>
 
       <div v-if="(sets ?? []).length > 1" class="mt-6 flex justify-center">
-        <div class="flex items-center gap-2 rounded-full border bg-card px-3 py-2 shadow-sm">
+        <div class="flex items-center gap-2 rounded-full border border-primary/30 bg-secondary px-3 py-2">
           <button
             v-for="(set, index) in sets ?? []"
             :key="set.id"
@@ -168,7 +172,7 @@ function goToArticleSlide(index: number) {
           >
             <span
               class="size-2.5 rounded-full transition-colors"
-              :class="setsSelectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
+              :class="setsSelectedIndex === index ? 'bg-gold-bright' : 'bg-primary/25'"
             />
           </button>
         </div>

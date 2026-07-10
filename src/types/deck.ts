@@ -21,17 +21,13 @@ export const DECK_FORMAT_LABELS: Record<DeckFormat, string> = {
   rapide: 'Rapide',
 }
 
-export const DECK_FORMAT_COLORS: Record<DeckFormat, { bg: string; text: string }> = {
-  normal: { bg: '#2454C7', text: '#ffffff' },
-  rapide: { bg: '#D97706', text: '#ffffff' },
-}
-
 export interface Deck {
   id: string
   user_id: string
   name: string
   format: DeckFormat
   is_public: boolean
+  cover_card_id: string | null
   star_count: number
   created_at: string
   updated_at: string
@@ -57,6 +53,7 @@ export interface DeckListItem {
   updated_at: string
   user_id: string
   author: { display_name: string; avatar_url: string | null } | null
+  cover_card: { image_url: string | null; name: string; is_holo: boolean } | null
 }
 
 export interface PaginatedResult<T> {

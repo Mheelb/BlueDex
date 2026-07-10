@@ -83,11 +83,13 @@ watch(
 <template>
   <header class="sticky top-0 z-20">
     <div class="flex items-center justify-between px-4 py-3 sm:px-6 lg:px-10">
-      <RouterLink :to="{ name: 'home' }" class="text-xl font-bold tracking-tight text-foreground">
+      <RouterLink :to="{ name: 'home' }" class="font-blackletter text-3xl text-foreground">
         BlueDex
       </RouterLink>
 
-      <nav class="relative hidden items-center gap-1 rounded-full border bg-card p-1 sm:flex">
+      <nav
+        class="relative hidden items-center gap-1 rounded-full border border-primary/35 bg-card p-1 shadow-[0_2px_10px_rgba(0,0,0,0.35)] sm:flex"
+      >
         <div
           class="absolute inset-y-1 left-0 rounded-full bg-primary transition-all duration-300 ease-out"
           :style="indicatorStyle"
@@ -153,7 +155,13 @@ watch(
         </DropdownMenu>
 
         <RouterLink v-else :to="{ name: 'login' }">
-          <Button variant="outline" size="lg">Connexion</Button>
+          <Button
+            variant="outline"
+            size="lg"
+            class="rounded-sm border-primary/60 bg-transparent font-engraved text-xs font-bold tracking-[0.06em] text-primary uppercase hover:bg-white/5 hover:text-gold-bright"
+          >
+            Connexion
+          </Button>
         </RouterLink>
       </div>
     </div>

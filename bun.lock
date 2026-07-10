@@ -5,7 +5,9 @@
     "": {
       "name": "bluedex-scaffold-tmp",
       "dependencies": {
+        "@fontsource/cinzel": "^5.2.8",
         "@fontsource/inter": "^5.2.8",
+        "@fontsource/pirata-one": "^5.2.8",
         "@lucide/vue": "^1.24.0",
         "@supabase/supabase-js": "^2.110.2",
         "@tanstack/pacer": "^0.21.1",
@@ -67,7 +69,11 @@
 
     "@floating-ui/vue": ["@floating-ui/vue@1.1.11", "", { "dependencies": { "@floating-ui/dom": "^1.7.6", "@floating-ui/utils": "^0.2.11", "vue-demi": ">=0.13.0" } }, "sha512-HzHKCNVxnGS35r9fCHBc3+uCnjw9IWIlCPL683cGgM9Kgj2BiAl8x1mS7vtvP6F9S/e/q4O6MApwSHj8hNLGfw=="],
 
+    "@fontsource/cinzel": ["@fontsource/cinzel@5.2.8", "", {}, "sha512-B9WeF/jPlOJOrcXfX96cy4KfM+s1QcU2C9W2hE3azBOBzPvzFkNpBovT5JmhAeicE/s4HZWKF9LF5hmEcqlbsw=="],
+
     "@fontsource/inter": ["@fontsource/inter@5.2.8", "", {}, "sha512-P6r5WnJoKiNVV+zvW2xM13gNdFhAEpQ9dQJHt3naLvfg+LkF2ldgSLiF4T41lf1SQCM9QmkqPTn4TH568IRagg=="],
+
+    "@fontsource/pirata-one": ["@fontsource/pirata-one@5.2.8", "", {}, "sha512-hl3Zqt6mgP+jstHnv2qYc2xQdYM1DSYrpSU9bpS1fYExoGFgJJNbXTPBQ9XivNk9RCKkibhou3iqoOZQOXM48w=="],
 
     "@internationalized/date": ["@internationalized/date@3.12.2", "", { "dependencies": { "@swc/helpers": "^0.5.0" } }, "sha512-FY1Y+H64NDs+HAF6omlnWxm3mEpfgaCSWtL5l551ZZfImA+kGjPFgrnJrGjH6lfmLL0g8Z/mBu1R3kufeCp6Jw=="],
 

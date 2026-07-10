@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/cinzel": "^5.2.8",
     "@fontsource/inter": "^5.2.8",
+    "@fontsource/pirata-one": "^5.2.8",
     "@lucide/vue": "^1.24.0",
     "@supabase/supabase-js": "^2.110.2",
     "@tanstack/pacer": "^0.21.1",

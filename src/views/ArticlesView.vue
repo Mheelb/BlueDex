@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/vue-query'
 import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
 import QueryState from '@/components/QueryState.vue'
 import Heading from '@/components/Heading.vue'
+import PageIntro from '@/components/PageIntro.vue'
 
 const { data: articles, isPending: loading, error } = useQuery({
   queryKey: articleKeys.published(),
@@ -17,8 +18,11 @@ function formatDate(date: string | null) {
 </script>
 
 <template>
-  <Heading>Actus</Heading>
-  <p class="mt-1 text-sm text-muted-foreground">Cartes, factions, decks : les derniers articles autour de Blue Rising.</p>
+    <PageIntro
+    eyebrow="Actus"
+    title="Suis les actualités"
+    description="Cartes, factions, decks : les derniers articles autour de Blue Rising."
+  />
 
   <QueryState
     class="mt-8"

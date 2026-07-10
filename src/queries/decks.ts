@@ -43,6 +43,7 @@ export async function saveDeck(
   name: string,
   format: DeckFormat,
   isPublic: boolean,
+  coverCardId: string | null,
   entries: DeckEntry[],
 ): Promise<string> {
   const { data, error } = await supabase.rpc('save_deck', {
@@ -50,6 +51,7 @@ export async function saveDeck(
     p_name: name,
     p_format: format,
     p_is_public: isPublic,
+    p_cover_card_id: coverCardId,
     p_entries: entries.map((e) => ({ card_id: e.card.id, quantity: e.quantity })),
   })
   if (error || !data) throw new Error(error?.message ?? 'Impossible d\'enregistrer le deck.')
@@ -75,9 +77,10 @@ export async function fetchPublicDecks(page: number, filters: DeckListQuery): Pr
   const query = applyDeckListQuery(
     supabase
       .from('decks')
-      .select('id, name, format, star_count, updated_at, user_id, author:profiles(display_name, avatar_url)', {
-        count: 'exact',
-      })
+      .select(
+        'id, name, format, star_count, updated_at, user_id, author:profiles(display_name, avatar_url), cover_card:cards!cover_card_id(image_url, name, is_holo)',
+        { count: 'exact' },
+      )
       .eq('is_public', true),
     filters,
   )
@@ -96,7 +99,9 @@ export async function fetchMyDecks(
   const query = applyDeckListQuery(
     supabase
       .from('decks')
-      .select('id, name, format, star_count, updated_at, user_id', { count: 'exact' })
+      .select('id, name, format, star_count, updated_at, user_id, cover_card:cards!cover_card_id(image_url, name, is_holo)', {
+        count: 'exact',
+      })
       .eq('user_id', userId),
     filters,
   )
@@ -118,9 +123,10 @@ export async function fetchBookmarkedDecks(
   const query = applyDeckListQuery(
     supabase
       .from('decks')
-      .select('id, name, format, star_count, updated_at, user_id, author:profiles(display_name, avatar_url)', {
-        count: 'exact',
-      })
+      .select(
+        'id, name, format, star_count, updated_at, user_id, author:profiles(display_name, avatar_url), cover_card:cards!cover_card_id(image_url, name, is_holo)',
+        { count: 'exact' },
+      )
       .in('id', bookmarkedDeckIds),
     filters,
   )

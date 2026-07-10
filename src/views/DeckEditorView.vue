@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { CheckIcon, CircleAlertIcon, CopyIcon, DownloadIcon } from '@lucide/vue'
+import { CheckIcon, CircleAlertIcon, CopyIcon, DownloadIcon, StarIcon } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import type { Card } from '@/types/card'
 import { createEmptyCardFilters } from '@/types/card'
@@ -40,6 +40,7 @@ const deckName = ref(draft?.name ?? 'Nouveau deck')
 const format = ref<DeckFormat>(draft?.format ?? 'normal')
 const isPublic = ref(false)
 const entries = ref<DeckEntry[]>(draft?.entries.map((e) => ({ ...e })) ?? [])
+const coverCardId = ref<string | null>(null)
 const error = ref<string | null>(null)
 
 const formatOptions: SelectFieldOption[] = DECK_FORMATS.map((f) => ({ value: f, label: DECK_FORMAT_LABELS[f] }))
@@ -58,9 +59,23 @@ watch(
     format.value = data.deck.format
     isPublic.value = data.deck.is_public
     entries.value = data.entries.map((e) => ({ ...e }))
+    coverCardId.value = data.deck.cover_card_id
   },
   { immediate: true },
 )
+
+// La carte de couverture doit toujours faire partie du deck : si elle en est
+// retirée (ou si aucune n'a encore été choisie), on retombe sur la première
+// carte restante plutôt que de laisser une vignette vide.
+watch(entries, (value) => {
+  if (value.some((e) => e.card.id === coverCardId.value)) return
+  coverCardId.value = value[0]?.card.id ?? null
+}, { deep: true })
+
+function setCover(cardId: string) {
+  if (readOnly.value) return
+  coverCardId.value = cardId
+}
 
 // Un deck public reste consultable par n'importe quel compte connecté, mais
 // seul son propriétaire peut le modifier : tant que le deck n'est pas encore
@@ -150,7 +165,7 @@ const saveMutation = useMutation({
     if (!name) throw new Error('Le nom du deck est requis.')
     if (!isDeckLegal(entries.value, format.value)) throw new Error('Le deck ne respecte pas les règles du format choisi.')
 
-    return saveDeck(props.deckId ?? null, name, format.value, isPublic.value, entries.value)
+    return saveDeck(props.deckId ?? null, name, format.value, isPublic.value, coverCardId.value, entries.value)
   },
   onSuccess: (deckId) => {
     queryClient.invalidateQueries({ queryKey: deckKeys.detail(deckId) })
@@ -248,9 +263,16 @@ function onExport() {
             :key="entry.card.id"
             :card="entry.card"
             :quantity="entry.quantity"
+            :show-cover-action="!readOnly"
+            :is-cover="entry.card.id === coverCardId"
             @click="removeCard(entry.card.id)"
+            @set-cover="setCover(entry.card.id)"
           />
         </div>
+        <p v-if="coverCardId" class="text-xs text-muted-foreground">
+          <StarIcon class="inline size-3 align-text-top" />
+          définit la carte de couverture affichée dans les listes de decks.
+        </p>
 
         <div class="flex flex-col gap-1 text-sm">
           <div

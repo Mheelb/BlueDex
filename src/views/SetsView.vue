@@ -151,11 +151,15 @@ function goToArticleSlide(index: number) {
               v-for="(article, index) in latestArticles"
               :key="article.id"
               type="button"
-              class="size-2.5 rounded-full transition-colors"
-              :class="articlesSelectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
+              class="flex size-6 items-center justify-center"
               :aria-label="`Aller à ${article.title}`"
               @click="goToArticleSlide(index)"
-            />
+            >
+              <span
+                class="size-2.5 rounded-full transition-colors"
+                :class="articlesSelectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
+              />
+            </button>
           </div>
         </div>
       </div>
@@ -213,11 +217,15 @@ function goToArticleSlide(index: number) {
             v-for="(set, index) in sets"
             :key="set.id"
             type="button"
-            class="size-2.5 rounded-full transition-colors"
-            :class="setsSelectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
+            class="flex size-6 items-center justify-center"
             :aria-label="`Aller à ${set.name}`"
             @click="goToSetSlide(index)"
-          />
+          >
+            <span
+              class="size-2.5 rounded-full transition-colors"
+              :class="setsSelectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
+            />
+          </button>
         </div>
       </div>
     </div>

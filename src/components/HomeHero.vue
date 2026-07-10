@@ -42,7 +42,7 @@ function fanStyle(index: number) {
         </p>
 
         <div class="mt-8 flex flex-wrap gap-3">
-          <Button as-child size="lg" class="bg-blue-500 text-white hover:bg-blue-400">
+          <Button as-child size="lg" class="bg-blue-600 text-white hover:bg-blue-500">
             <RouterLink :to="{ name: 'sets' }">Explorer les cartes</RouterLink>
           </Button>
           <Button

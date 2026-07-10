@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboardIcon, LogOutIcon, MoonIcon, SunIcon } from '@lucide/vue'
+import { LayoutDashboardIcon, LogOutIcon, MoonIcon, NewspaperIcon, SunIcon } from '@lucide/vue'
 import { useAuthUser } from '@/composables/useAuthUser'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { supabase } from '@/lib/supabase'
@@ -35,6 +35,7 @@ const route = useRoute()
 const tabs = [
   { name: 'sets', label: 'Sets', matchPrefix: '/sets' },
   { name: 'deck-builder', label: 'Deck Builder', matchPrefix: '/decks' },
+  { name: 'articles', label: 'Actus', matchPrefix: '/actus' },
 ]
 
 function isTabActive(tab: (typeof tabs)[number]) {
@@ -130,6 +131,12 @@ watch(
               <RouterLink :to="{ name: 'admin-sets' }">
                 <LayoutDashboardIcon />
                 Dashboard
+              </RouterLink>
+            </DropdownMenuItem>
+            <DropdownMenuItem as-child>
+              <RouterLink :to="{ name: 'admin-articles' }">
+                <NewspaperIcon />
+                Articles
               </RouterLink>
             </DropdownMenuItem>
             <DropdownMenuItem variant="destructive" @click="onLogout">

@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import AppHeader from '@/components/AppHeader.vue'
+import AppFooter from '@/components/AppFooter.vue'
 </script>
 
 <template>
-  <div class="relative isolate min-h-screen">
+  <div class="relative isolate flex min-h-screen flex-col">
     <div class="bg-grid-fade pointer-events-none absolute inset-x-0 top-0 -z-10 h-screen" aria-hidden="true" />
     <AppHeader />
-    <main>
+    <main class="flex-1">
       <RouterView />
     </main>
+    <AppFooter />
   </div>
 </template>
 

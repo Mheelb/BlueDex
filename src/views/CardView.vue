@@ -58,13 +58,21 @@ watch(() => [props.setSlug, props.cardNumber], load)
       <div class="grid grid-cols-1 gap-10 md:grid-cols-2">
         <div class="mx-auto w-full max-w-sm">
           <CardImage :src="card.image_url" :alt="card.name" :is-holo="card.is_holo" />
+          <p v-if="card.artist" class="mt-2 text-center text-xs text-muted-foreground">
+            Illustration : {{ card.artist }}
+          </p>
         </div>
 
         <div>
-          <div v-if="card.is_holo || card.is_signed || card.is_numbered" class="mb-2 flex flex-wrap gap-2">
+          <div
+            v-if="card.is_holo || card.is_signed || card.is_numbered || card.is_full_art || card.is_overframe"
+            class="mb-2 flex flex-wrap gap-2"
+          >
             <Badge v-if="card.is_holo" variant="secondary">Holo</Badge>
             <Badge v-if="card.is_signed" variant="secondary">Signée</Badge>
             <Badge v-if="card.is_numbered" variant="secondary">Numérotée /{{ card.numbered_total }}</Badge>
+            <Badge v-if="card.is_full_art" variant="secondary">Full Art</Badge>
+            <Badge v-if="card.is_overframe" variant="secondary">Overframe</Badge>
           </div>
 
           <h1 class="text-3xl font-bold">{{ card.name }}</h1>

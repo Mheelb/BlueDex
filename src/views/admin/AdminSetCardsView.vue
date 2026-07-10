@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { PencilIcon, PlusIcon, Trash2Icon, UploadIcon } from '@lucide/vue'
+import { CopyIcon, PencilIcon, PlusIcon, Trash2Icon, UploadIcon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
 import type { Card, CardType, Faction, Rarity, Subtype } from '@/types/card'
 import { CARD_TYPES, FACTIONS, RARITIES, SUBTYPES, createEmptyCardFilters } from '@/types/card'
@@ -61,6 +61,8 @@ function emptyForm() {
     is_signed: false,
     is_numbered: false,
     numbered_total: '' as string | number,
+    is_full_art: false,
+    is_overframe: false,
     type: '' as CardType | '',
     subtype: '' as Subtype | '',
     faction: '' as Faction | '',
@@ -68,6 +70,7 @@ function emptyForm() {
     power: '' as string | number,
     support: '' as string | number,
     effect: '',
+    artist: '',
   }
 }
 
@@ -144,6 +147,8 @@ function openEditSheet(card: Card) {
   form.is_signed = card.is_signed
   form.is_numbered = card.is_numbered
   form.numbered_total = card.numbered_total ?? ''
+  form.is_full_art = card.is_full_art
+  form.is_overframe = card.is_overframe
   form.type = card.type ?? ''
   form.subtype = card.subtype ?? ''
   form.faction = card.faction ?? ''
@@ -151,6 +156,28 @@ function openEditSheet(card: Card) {
   form.power = card.power ?? ''
   form.support = card.support ?? ''
   form.effect = card.effect ?? ''
+  form.artist = card.artist ?? ''
+  sheetOpen.value = true
+}
+
+function openDuplicateSheet(card: Card) {
+  resetForm()
+  form.name = card.name
+  form.rarity = card.rarity
+  form.is_holo = card.is_holo
+  form.is_signed = card.is_signed
+  form.is_numbered = card.is_numbered
+  form.numbered_total = card.numbered_total ?? ''
+  form.is_full_art = card.is_full_art
+  form.is_overframe = card.is_overframe
+  form.type = card.type ?? ''
+  form.subtype = card.subtype ?? ''
+  form.faction = card.faction ?? ''
+  form.cost = card.cost ?? ''
+  form.power = card.power ?? ''
+  form.support = card.support ?? ''
+  form.effect = card.effect ?? ''
+  form.artist = card.artist ?? ''
   sheetOpen.value = true
 }
 
@@ -209,6 +236,8 @@ async function onSubmit() {
     is_signed: form.is_signed,
     is_numbered: form.is_numbered,
     numbered_total: form.is_numbered ? Number(form.numbered_total) : null,
+    is_full_art: form.is_full_art,
+    is_overframe: form.is_overframe,
     type: form.type || null,
     subtype: form.subtype || null,
     faction: form.faction || null,
@@ -216,6 +245,7 @@ async function onSubmit() {
     power: form.power === '' ? null : Number(form.power),
     support: form.support === '' ? null : Number(form.support),
     effect: form.effect || null,
+    artist: form.artist || null,
     ...(image_url ? { image_url } : {}),
   }
 
@@ -290,6 +320,9 @@ async function onDelete(card: Card) {
             <div class="flex items-center gap-1">
               <Button variant="ghost" size="icon" @click="openEditSheet(card)">
                 <PencilIcon />
+              </Button>
+              <Button variant="ghost" size="icon" title="Dupliquer" @click="openDuplicateSheet(card)">
+                <CopyIcon />
               </Button>
               <ConfirmDeleteDialog
                 :title="`Supprimer la carte « ${card.name} » ?`"
@@ -375,6 +408,11 @@ async function onDelete(card: Card) {
               <Textarea id="card-effect" v-model="form.effect" rows="3" />
             </div>
 
+            <div class="flex flex-col gap-1.5 sm:col-span-3">
+              <Label for="card-artist">Artiste (illustration)</Label>
+              <Input id="card-artist" v-model="form.artist" placeholder="Optionnel" />
+            </div>
+
             <div class="flex flex-wrap items-center gap-4 sm:col-span-3">
               <label class="flex items-center gap-2 text-sm">
                 <Checkbox v-model="form.is_holo" />
@@ -387,6 +425,14 @@ async function onDelete(card: Card) {
               <label class="flex items-center gap-2 text-sm">
                 <Checkbox v-model="form.is_numbered" />
                 Numéroté
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <Checkbox v-model="form.is_full_art" />
+                Full art
+              </label>
+              <label class="flex items-center gap-2 text-sm">
+                <Checkbox v-model="form.is_overframe" />
+                Overframe
               </label>
             </div>
 

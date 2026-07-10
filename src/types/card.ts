@@ -55,6 +55,8 @@ export interface Card {
   is_signed: boolean
   is_numbered: boolean
   numbered_total: number | null
+  is_full_art: boolean
+  is_overframe: boolean
   type: CardType | null
   subtype: Subtype | null
   faction: Faction | null
@@ -62,6 +64,7 @@ export interface Card {
   power: number | null
   support: number | null
   effect: string | null
+  artist: string | null
 }
 
 export type CardSort = 'number-asc' | 'number-desc' | 'name-asc' | 'name-desc'

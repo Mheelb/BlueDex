@@ -3,14 +3,20 @@ import { computed, onMounted, ref } from 'vue'
 import { LayersIcon } from '@lucide/vue'
 import Autoplay from 'embla-carousel-autoplay'
 import { supabase } from '@/lib/supabase'
-import type { CardSet } from '@/types/card'
+import type { Card, CardSet } from '@/types/card'
+import type { Article } from '@/types/article'
 import { Badge } from '@/components/ui/badge'
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel'
-import SetsHero from '@/components/SetsHero.vue'
+import HomeHero from '@/components/HomeHero.vue'
 
 const sets = ref<CardSet[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+const featuredCards = ref<Card[]>([])
+const featuredSetSlug = ref('')
+const latestArticles = ref<Article[]>([])
+
+const totalCards = computed(() => sets.value.reduce((sum, s) => sum + s.card_count, 0))
 
 const newestSetId = computed(() => {
   const withDate = sets.value.filter((s) => s.release_date)
@@ -35,39 +41,132 @@ onMounted(async () => {
     sets.value = data as CardSet[]
   }
   loading.value = false
+
+  const setWithCards = sets.value.find((s) => s.card_count > 0)
+  if (setWithCards) {
+    featuredSetSlug.value = setWithCards.slug
+    const { data: cardsData } = await supabase
+      .from('cards')
+      .select('*')
+      .eq('set_id', setWithCards.id)
+      .order('is_holo', { ascending: false })
+      .limit(3)
+    featuredCards.value = (cardsData as Card[]) ?? []
+  }
+
+  const { data: articlesData } = await supabase
+    .from('articles')
+    .select('*')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(4)
+  latestArticles.value = (articlesData as Article[]) ?? []
 })
 
-const carouselApi = ref<CarouselApi>()
-const selectedIndex = ref(0)
+const setsCarouselApi = ref<CarouselApi>()
+const setsSelectedIndex = ref(0)
 
-function onInitApi(api: CarouselApi) {
-  carouselApi.value = api
+function onSetsInitApi(api: CarouselApi) {
+  setsCarouselApi.value = api
   api?.on('select', () => {
-    selectedIndex.value = api.selectedScrollSnap()
+    setsSelectedIndex.value = api.selectedScrollSnap()
   })
 }
 
-function goToSlide(index: number) {
-  carouselApi.value?.scrollTo(index)
+function goToSetSlide(index: number) {
+  setsCarouselApi.value?.scrollTo(index)
+}
+
+const articlesCarouselApi = ref<CarouselApi>()
+const articlesSelectedIndex = ref(0)
+
+function onArticlesInitApi(api: CarouselApi) {
+  articlesCarouselApi.value = api
+  api?.on('select', () => {
+    articlesSelectedIndex.value = api.selectedScrollSnap()
+  })
+}
+
+function goToArticleSlide(index: number) {
+  articlesCarouselApi.value?.scrollTo(index)
 }
 </script>
 
 <template>
   <div class="mx-auto max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
-    <SetsHero :sets="sets" :loading="loading" />
+    <HomeHero :featured-cards="featuredCards" :featured-set-slug="featuredSetSlug" :total-cards="totalCards" />
 
     <p v-if="loading" class="text-muted-foreground">Chargement...</p>
     <p v-else-if="error" class="text-destructive">{{ error }}</p>
     <p v-else-if="sets.length === 0" class="text-muted-foreground">Aucun set pour le moment.</p>
 
     <div v-else>
-      <h2 class="mb-4 text-lg font-semibold">À la une</h2>
+      <div v-if="latestArticles.length > 0" class="mb-10">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-lg font-semibold">À la une</h2>
+          <RouterLink :to="{ name: 'articles' }" class="text-sm text-primary hover:underline">
+            Tous les articles
+          </RouterLink>
+        </div>
+
+        <Carousel
+          :opts="{ loop: true, align: 'start' }"
+          :plugins="[Autoplay({ delay: 5000, stopOnInteraction: false })]"
+          class="w-full"
+          @init-api="onArticlesInitApi"
+        >
+          <CarouselContent>
+            <CarouselItem
+              v-for="(article, index) in latestArticles"
+              :key="article.id"
+              class="basis-full sm:basis-1/2 lg:basis-1/3"
+            >
+              <RouterLink
+                :to="{ name: 'article', params: { slug: article.slug } }"
+                class="group block overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md"
+              >
+                <div class="relative aspect-video overflow-hidden bg-gradient-to-br from-primary to-primary/70">
+                  <Badge v-if="index === 0" class="absolute top-3 right-3 z-10 bg-white text-primary">
+                    Nouveau
+                  </Badge>
+                  <img
+                    v-if="article.cover_image_url"
+                    :src="article.cover_image_url"
+                    :alt="article.title"
+                    class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                </div>
+                <div class="p-3">
+                  <p class="line-clamp-1 font-medium group-hover:underline">{{ article.title }}</p>
+                  <p class="mt-1 line-clamp-2 text-xs text-muted-foreground">{{ article.excerpt }}</p>
+                </div>
+              </RouterLink>
+            </CarouselItem>
+          </CarouselContent>
+        </Carousel>
+
+        <div v-if="latestArticles.length > 1" class="mt-4 flex justify-center">
+          <div class="flex items-center gap-2 rounded-full border bg-card px-3 py-2 shadow-sm">
+            <button
+              v-for="(article, index) in latestArticles"
+              :key="article.id"
+              type="button"
+              class="size-2.5 rounded-full transition-colors"
+              :class="articlesSelectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
+              :aria-label="`Aller à ${article.title}`"
+              @click="goToArticleSlide(index)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <h2 class="mb-4 text-lg font-semibold">Sets</h2>
 
       <Carousel
         :opts="{ loop: true, align: 'start' }"
         :plugins="[Autoplay({ delay: 5000, stopOnInteraction: false })]"
         class="w-full"
-        @init-api="onInitApi"
+        @init-api="onSetsInitApi"
       >
         <CarouselContent>
           <CarouselItem
@@ -115,9 +214,9 @@ function goToSlide(index: number) {
             :key="set.id"
             type="button"
             class="size-2.5 rounded-full transition-colors"
-            :class="selectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
+            :class="setsSelectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
             :aria-label="`Aller à ${set.name}`"
-            @click="goToSlide(index)"
+            @click="goToSetSlide(index)"
           />
         </div>
       </div>

@@ -26,7 +26,33 @@ const TOPIC_ANGLES = [
   'une synergie ou rivalité entre deux factions et comment ça se traduit sur le plateau',
   'un point sur le set en cours (nouveautés, répartition des raretés, cartes qui se distinguent)',
   'un focus collection sur une carte holo ou numérotée et ce qui la rend recherchée',
+  'une carte sous-estimée ou boudée par les joueurs qui mérite une seconde chance, et pourquoi',
+  'un combo ou une synergie précise entre deux ou trois cartes spécifiques, avec le déroulé du coup',
+  'un deck "petit budget" jouable uniquement avec des cartes Commune et Peu commune',
+  'les erreurs les plus fréquentes de deckbuilding chez les joueurs qui débutent, avec des exemples concrets',
+  'un guide pour contrer ou affronter un archétype de deck qui revient souvent',
+  'ce que les cartes d\'un set changent concrètement pour les decks et archétypes déjà existants',
+  'une analyse d\'un match-up entre deux factions précises et comment l\'aborder des deux côtés',
+  'un glossaire ou lexique des mécaniques et termes du jeu pour les nouveaux joueurs',
+  'un comparatif entre les raretés Prestige I, II et III : valeur de jeu vs valeur de collection',
+  'les cartes à prioriser pour compléter sa collection d\'un set donné, et pourquoi celles-là',
+  'un portrait de style de jeu (agressif, contrôle, valeur/lent) à travers les cartes qui l\'incarnent le mieux',
+  'un focus sur l\'artiste ou l\'illustration d\'une carte marquante et ce qu\'elle apporte à l\'ambiance du jeu',
+  'un deck multi-factions vs un deck mono-faction : avantages et compromis de chaque approche',
+  'un guide des meilleurs boosters/packs à acheter selon l\'objectif du joueur (compléter un set, chasser une carte précise, revendre)',
+  'un point sur la gestion et la conservation d\'une collection (classement, protection, stockage des cartes holos/numérotées/signées)',
+  'ce qui fait grimper la cote d\'une carte numérotée ou signée aux yeux des collectionneurs',
+  'un tour d\'horizon des rumeurs et leaks qui circulent sur un prochain set, présentés clairement comme non confirmés',
+  'une théorie ou hypothèse sur la direction que pourrait prendre le jeu (nouvelle mécanique, nouvelle faction, évolution du scénario)',
+  'une carte qui fait un clin d\'oeil à un joueur, un événement ou une figure de la scène compétitive/communautaire, et ce que ça représente',
+  'un retour sur un événement communautaire ou compétitif autour de Blue Rising (tournoi, stream, sortie de set) et ce qu\'il faut en retenir',
+  'un regard critique sur un point qui pose problème actuellement dans le jeu (équilibrage, distribution, disponibilité) et pourquoi',
+  'ce que Blue Rising réussit particulièrement bien par rapport à d\'autres jeux de cartes, avec des exemples concrets',
+  'un portrait d\'artiste : le style d\'un illustrateur à travers plusieurs de ses cartes',
+  'un portrait de joueur ou de figure de la communauté à travers les cartes qui le/la représentent ou qu\'il/elle affectionne',
 ]
+
+const SPECULATIVE_ANGLE_KEYWORDS = ['rumeur', 'leak', 'théorie', 'hypothèse', 'clin d\'oeil', 'figure de la']
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -48,6 +74,15 @@ function extractJson(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
   const raw = fenced ? fenced[1] : text
   return JSON.parse(raw.trim())
+}
+
+function shuffle<T>(items: T[]): T[] {
+  const arr = [...items]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
 }
 
 async function isAuthorized(req: Request): Promise<boolean> {
@@ -80,13 +115,42 @@ Deno.serve(async (req) => {
       supabase.from('sets').select('name, slug, card_count'),
       supabase
         .from('cards')
-        .select('name, rarity, type, subtype, faction, cost, power, support, effect, is_holo')
-        .limit(60),
-      supabase.from('articles').select('title').order('created_at', { ascending: false }).limit(20),
+        .select('name, rarity, type, subtype, faction, cost, power, support, effect, is_holo'),
+      supabase
+        .from('articles')
+        .select('title, topic_angle, featured_cards')
+        .order('created_at', { ascending: false })
+        .limit(25),
     ])
 
-    const topic = TOPIC_ANGLES[Math.floor(Math.random() * TOPIC_ANGLES.length)]
+    // On tire un échantillon aléatoire (et pas toujours les mêmes 60 premières
+    // cartes de la table) pour que le modèle ait une vraie chance de parler
+    // d'autre chose que des cartes habituelles.
+    const cardSample = shuffle(cards ?? []).slice(0, 80)
+
+    // Cartes déjà mises en avant récemment (top 5, focus carte, etc.) : on les
+    // signale au modèle pour qu'il évite de les reprendre en boucle.
+    const recentlyFeaturedCards = Array.from(
+      new Set((existingArticles ?? []).flatMap((a) => a.featured_cards ?? [])),
+    ).slice(0, 60)
+
+    // On évite de reproposer l'un des derniers angles utilisés (environ un
+    // tiers du pool, pour laisser le temps aux autres angles de tourner).
+    const recentAngles = new Set(
+      (existingArticles ?? [])
+        .slice(0, Math.ceil(TOPIC_ANGLES.length / 3))
+        .map((a) => a.topic_angle)
+        .filter(Boolean),
+    )
+    const availableAngles = TOPIC_ANGLES.filter((t) => !recentAngles.has(t))
+    const topic = shuffle(availableAngles.length > 0 ? availableAngles : TOPIC_ANGLES)[0]
+
     const existingTitles = (existingArticles ?? []).map((a) => a.title)
+
+    const isSpeculativeAngle = SPECULATIVE_ANGLE_KEYWORDS.some((kw) => topic.includes(kw))
+    const speculativeGuidance = isSpeculativeAngle
+      ? `\n\nCet angle touche à des rumeurs, leaks, théories ou à des personnes/événements réels : sois particulièrement rigoureux. Ne présente jamais une rumeur ou une hypothèse comme un fait acquis (utilise des formulations claires : "rumeur non confirmée", "certains joueurs pensent que", "si l'on en croit..."). Ne fais un lien entre une carte et une personne/un événement réel que s'il est corroboré par les données de carte fournies (nom, effet, artiste) ou par une recherche web fiable — n'invente aucune connexion, aucun leak, aucune citation.`
+      : ''
 
     const prompt = `Tu écris pour le blog de BlueDex, un site communautaire (non-officiel) dédié au jeu de cartes à collectionner "Blue Rising".
 
@@ -94,11 +158,15 @@ Voici des données réelles du jeu à utiliser comme référence factuelle (n'in
 
 Sets: ${JSON.stringify(sets)}
 
-Extrait de cartes existantes: ${JSON.stringify(cards)}
+Extrait de cartes existantes (échantillon aléatoire, pas nécessairement exhaustif) : ${JSON.stringify(cardSample)}
 
 Titres d'articles déjà publiés (n'en refais pas un similaire) : ${JSON.stringify(existingTitles)}
 
-Écris un nouvel article en français dont l'angle est : ${topic}.
+Cartes déjà mises en avant dans des articles récents (à éviter sauf si l'angle l'exige vraiment — privilégie des cartes différentes pour renouveler le contenu) : ${JSON.stringify(recentlyFeaturedCards)}
+
+Avant d'écrire, utilise l'outil de recherche web pour chercher s'il existe des discussions, avis ou réactions récentes et réellement pertinentes sur le jeu "Blue Rising" (forums, réseaux sociaux, articles communautaires). Si tu trouves quelque chose de concret et pertinent par rapport à l'angle choisi, appuie-toi dessus et mentionne la source de façon naturelle dans le texte (ex : "sur les réseaux, plusieurs joueurs remarquent que...", sans lien brut ni citation inventée). Si la recherche ne renvoie rien de pertinent ou d'exploitable, n'insiste pas et n'invente aucun avis ou source — base-toi uniquement sur les données du jeu fournies ci-dessus.
+
+Écris un nouvel article en français dont l'angle est : ${topic}.${speculativeGuidance}
 
 Contraintes :
 - Ton enjoué mais informatif, destiné à des joueurs de Blue Rising.
@@ -107,35 +175,56 @@ Contraintes :
 - Un titre court et accrocheur (pas de guillemets autour).
 - Un extrait d'une phrase (max 160 caractères) qui résume l'article.
 
-Réponds uniquement avec un objet JSON strict de cette forme, sans texte autour :
-{"title": "...", "excerpt": "...", "content": "... (markdown) ..."}`
+Une fois tes recherches terminées (ou d'emblée si elles ne sont pas utiles à cet angle), réponds en dernier avec uniquement un objet JSON strict de cette forme, sans texte autour :
+{"title": "...", "excerpt": "...", "content": "... (markdown) ...", "featured_cards": ["Nom exact de chaque carte mentionnée en bonne place dans l'article, tel qu'il apparaît dans les données fournies"]}`
 
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 2000,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    })
+    const anthropicMessages: Array<{ role: string; content: unknown }> = [{ role: 'user', content: prompt }]
+    let anthropicData: { content?: Array<{ type: string; text?: string }>; stop_reason?: string } | undefined
 
-    if (!anthropicResponse.ok) {
-      const errText = await anthropicResponse.text()
-      return jsonResponse({ error: `Anthropic API error: ${errText}` }, 502)
+    // web_search est un outil exécuté côté serveur Anthropic : la boucle de
+    // recherche se fait dans la même requête, mais peut s'arrêter sur
+    // stop_reason "pause_turn" si elle prend trop d'itérations. On relance
+    // dans ce cas en renvoyant la conversation telle quelle.
+    for (let i = 0; i < 3; i++) {
+      const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: ANTHROPIC_MODEL,
+          max_tokens: 3000,
+          tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }],
+          messages: anthropicMessages,
+        }),
+      })
+
+      if (!anthropicResponse.ok) {
+        const errText = await anthropicResponse.text()
+        return jsonResponse({ error: `Anthropic API error: ${errText}` }, 502)
+      }
+
+      anthropicData = await anthropicResponse.json()
+
+      if (anthropicData?.stop_reason !== 'pause_turn') break
+
+      anthropicMessages.push({ role: 'assistant', content: anthropicData?.content })
     }
 
-    const anthropicData = await anthropicResponse.json()
-    const textBlock = anthropicData.content?.find((b: { type: string }) => b.type === 'text')
-    if (!textBlock) {
+    const textBlocks = (anthropicData?.content ?? []).filter((b) => b.type === 'text' && b.text)
+    const textBlock = textBlocks[textBlocks.length - 1]
+    if (!textBlock?.text) {
       return jsonResponse({ error: 'Réponse Anthropic sans contenu texte.' }, 502)
     }
 
-    const parsed = extractJson(textBlock.text) as { title: string; excerpt: string; content: string }
+    const parsed = extractJson(textBlock.text) as {
+      title: string
+      excerpt: string
+      content: string
+      featured_cards?: string[]
+    }
 
     let slug = slugify(parsed.title)
     const { data: slugCollision } = await supabase.from('articles').select('id').eq('slug', slug).maybeSingle()
@@ -151,6 +240,8 @@ Réponds uniquement avec un objet JSON strict de cette forme, sans texte autour 
         excerpt: parsed.excerpt,
         content: parsed.content,
         status: 'draft',
+        topic_angle: topic,
+        featured_cards: parsed.featured_cards ?? [],
       })
       .select()
       .single()

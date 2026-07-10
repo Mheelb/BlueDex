@@ -1,25 +1,34 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ListIcon, PencilIcon, PlusIcon, Trash2Icon } from '@lucide/vue'
+import { reactive, ref } from 'vue'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useForm } from '@tanstack/vue-form'
+import { ImageDownIcon, ListIcon, PencilIcon, PlusIcon, Trash2Icon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
 import type { CardSet } from '@/types/card'
+import { fetchSets, setKeys } from '@/queries/sets'
+import { cardKeys } from '@/queries/cards'
+import { migrateAllCardImages, type MigrationSummary } from '@/lib/imageMigration'
+import { required, slugPattern } from '@/lib/formValidators'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Separator } from '@/components/ui/separator'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
+import FormField from '@/components/FormField.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import QueryState from '@/components/QueryState.vue'
 
-const router = useRouter()
+const queryClient = useQueryClient()
 
-const sets = ref<CardSet[]>([])
-const loading = ref(true)
+const { data: sets, isPending: loading } = useQuery({
+  queryKey: setKeys.list('created_at'),
+  queryFn: () => fetchSets('created_at'),
+})
+
 const error = ref<string | null>(null)
-const saving = ref(false)
 const sheetOpen = ref(false)
-const fieldErrors = ref<Record<string, string>>({})
 const editingId = ref<string | null>(null)
 
 function emptyForm() {
@@ -32,25 +41,46 @@ function emptyForm() {
   }
 }
 
-const form = reactive(emptyForm())
+const validateSlug = ({ value }: { value: string }) =>
+  required('Le slug est requis.')({ value }) ??
+  slugPattern('Uniquement des minuscules, chiffres et tirets (ex: base-set).')({ value })
 
-async function load() {
-  loading.value = true
-  const { data, error: fetchError } = await supabase.from('sets').select('*').order('created_at', { ascending: false })
-  if (fetchError) {
-    error.value = fetchError.message
-  } else {
-    sets.value = data as CardSet[]
-  }
-  loading.value = false
-}
+const saveMutation = useMutation({
+  mutationFn: async (value: ReturnType<typeof emptyForm>) => {
+    const payload = {
+      name: value.name,
+      slug: value.slug,
+      release_date: value.release_date || null,
+      logo_url: value.logo_url || null,
+      symbol_url: value.symbol_url || null,
+    }
 
-onMounted(load)
+    const { error: saveError } = editingId.value
+      ? await supabase.from('sets').update(payload).eq('id', editingId.value)
+      : await supabase.from('sets').insert({ ...payload, card_count: 0 })
+
+    if (saveError) throw new Error(saveError.message)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: setKeys.all })
+    sheetOpen.value = false
+    resetForm()
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
+
+const form = useForm({
+  defaultValues: emptyForm(),
+  onSubmit: async ({ value }) => {
+    await saveMutation.mutateAsync(value)
+  },
+})
 
 function resetForm() {
   editingId.value = null
-  Object.assign(form, emptyForm())
-  fieldErrors.value = {}
+  form.reset(emptyForm())
   error.value = null
 }
 
@@ -62,88 +92,101 @@ function openCreateSheet() {
 function openEditSheet(set: CardSet) {
   resetForm()
   editingId.value = set.id
-  form.name = set.name
-  form.slug = set.slug
-  form.release_date = set.release_date ?? ''
-  form.logo_url = set.logo_url ?? ''
-  form.symbol_url = set.symbol_url ?? ''
+  form.reset({
+    name: set.name,
+    slug: set.slug,
+    release_date: set.release_date ?? '',
+    logo_url: set.logo_url ?? '',
+    symbol_url: set.symbol_url ?? '',
+  })
   sheetOpen.value = true
 }
 
-const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/
+const deleteMutation = useMutation({
+  mutationFn: async (set: CardSet) => {
+    const { error: deleteError } = await supabase.from('sets').delete().eq('id', set.id)
+    if (deleteError) throw new Error(deleteError.message)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: setKeys.all })
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
 
-function validate(): boolean {
-  const errors: Record<string, string> = {}
-
-  if (!form.name.trim()) errors.name = 'Le nom est requis.'
-  if (!form.slug.trim()) {
-    errors.slug = 'Le slug est requis.'
-  } else if (!SLUG_PATTERN.test(form.slug)) {
-    errors.slug = 'Uniquement des minuscules, chiffres et tirets (ex: base-set).'
-  }
-
-  fieldErrors.value = errors
-  return Object.keys(errors).length === 0
+function onDelete(set: CardSet) {
+  deleteMutation.mutate(set)
 }
 
-async function onSubmit() {
-  if (!validate()) return
+const migrating = ref(false)
+const migrationProgress = reactive({ done: 0, total: 0 })
+const migrationSummary = ref<MigrationSummary | null>(null)
+const migrationError = ref<string | null>(null)
 
-  saving.value = true
-  error.value = null
-
-  const payload = {
-    name: form.name,
-    slug: form.slug,
-    release_date: form.release_date || null,
-    logo_url: form.logo_url || null,
-    symbol_url: form.symbol_url || null,
-  }
-
-  const { error: saveError } = editingId.value
-    ? await supabase.from('sets').update(payload).eq('id', editingId.value)
-    : await supabase.from('sets').insert({ ...payload, card_count: 0 })
-
-  saving.value = false
-
-  if (saveError) {
-    error.value = saveError.message
-    return
-  }
-
-  sheetOpen.value = false
-  resetForm()
-  await load()
+function formatKb(bytes: number) {
+  return `${(bytes / 1024).toFixed(0)} Ko`
 }
 
-async function onDelete(set: CardSet) {
-  const { error: deleteError } = await supabase.from('sets').delete().eq('id', set.id)
-  if (deleteError) {
-    error.value = deleteError.message
-    return
-  }
-  await load()
-}
+async function onMigrateImages() {
+  if (migrating.value) return
 
+  migrating.value = true
+  migrationError.value = null
+  migrationSummary.value = null
+  migrationProgress.done = 0
+  migrationProgress.total = 0
+
+  try {
+    const summary = await migrateAllCardImages((progress) => {
+      migrationProgress.done = progress.done
+      migrationProgress.total = progress.total
+    })
+    migrationSummary.value = summary
+    queryClient.invalidateQueries({ queryKey: cardKeys.all })
+  } catch (err) {
+    migrationError.value = (err as Error).message
+  } finally {
+    migrating.value = false
+  }
+}
 </script>
 
 <template>
-  <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-    <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold">Admin · Sets</h1>
-      <div class="flex items-center gap-2">
-        <Button @click="openCreateSheet">
-          <PlusIcon />
-          Ajouter un set
+  <PageHeader title="Admin · Sets">
+    <div class="flex gap-2">
+      <ConfirmDeleteDialog
+        title="Optimiser toutes les images ?"
+        description="Recompresse les images de cartes en WebP directement dans Supabase. Les fichiers d'origine seront supprimés du bucket une fois remplacés. Ça peut prendre plusieurs minutes selon le nombre de cartes."
+        confirm-label="Optimiser"
+        variant="default"
+        @confirm="onMigrateImages"
+      >
+        <Button variant="outline" :disabled="migrating">
+          <ImageDownIcon />
+          {{ migrating ? 'Optimisation en cours...' : 'Optimiser les images' }}
         </Button>
-      </div>
+      </ConfirmDeleteDialog>
+      <Button @click="openCreateSheet">
+        <PlusIcon />
+        Ajouter un set
+      </Button>
     </div>
+  </PageHeader>
 
-    <p v-if="loading" class="text-muted-foreground">Chargement...</p>
-    <p v-else-if="sets.length === 0" class="text-muted-foreground">Aucun set pour le moment.</p>
+  <div v-if="migrating" class="mb-4 text-sm text-muted-foreground">
+    {{ migrationProgress.done }} / {{ migrationProgress.total }} images traitées...
+  </div>
+  <p v-else-if="migrationError" class="mb-4 text-sm text-destructive">{{ migrationError }}</p>
+  <div v-else-if="migrationSummary" class="mb-4 text-sm text-muted-foreground">
+    {{ migrationSummary.optimizedCount }} image(s) optimisée(s), {{ formatKb(migrationSummary.bytesSaved) }}
+    économisés · {{ migrationSummary.skippedCount }} déjà optimales
+    <span v-if="migrationSummary.errorCount"> · {{ migrationSummary.errorCount }} erreur(s)</span>
+  </div>
 
-    <div v-else class="flex flex-col gap-3">
-      <Card v-for="set in sets" :key="set.id">
+  <QueryState :loading="loading" :empty="sets?.length === 0" empty-message="Aucun set pour le moment.">
+    <div class="flex flex-col gap-3">
+      <Card v-for="set in sets ?? []" :key="set.id">
         <CardContent class="flex items-center justify-between">
           <div>
             <p class="font-medium">{{ set.name }}</p>
@@ -173,50 +216,83 @@ async function onDelete(set: CardSet) {
         </CardContent>
       </Card>
     </div>
+  </QueryState>
 
-    <Sheet v-model:open="sheetOpen">
-      <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
-        <SheetHeader class="border-b">
-          <SheetTitle>{{ editingId ? 'Modifier le set' : 'Nouveau set' }}</SheetTitle>
-        </SheetHeader>
+  <Sheet v-model:open="sheetOpen">
+    <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
+      <SheetHeader>
+        <SheetTitle>{{ editingId ? 'Modifier le set' : 'Nouveau set' }}</SheetTitle>
+      </SheetHeader>
+      <Separator />
 
-        <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSubmit" novalidate>
-          <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
-            <div class="flex flex-col gap-1.5">
-              <Label for="set-name">Nom *</Label>
-              <Input id="set-name" v-model="form.name" :aria-invalid="!!fieldErrors.name" />
-              <p v-if="fieldErrors.name" class="text-xs text-destructive">{{ fieldErrors.name }}</p>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="set-slug">Slug *</Label>
-              <Input id="set-slug" v-model="form.slug" placeholder="ex: base-set" :aria-invalid="!!fieldErrors.slug" />
-              <p v-if="fieldErrors.slug" class="text-xs text-destructive">{{ fieldErrors.slug }}</p>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="set-release">Date de sortie</Label>
-              <Input id="set-release" v-model="form.release_date" type="date" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="set-logo">URL du logo</Label>
-              <Input id="set-logo" v-model="form.logo_url" placeholder="Optionnel" />
-            </div>
-            <div class="flex flex-col gap-1.5 sm:col-span-2">
-              <Label for="set-symbol">URL du symbole</Label>
-              <Input id="set-symbol" v-model="form.symbol_url" placeholder="Optionnel" />
-            </div>
+      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="() => form.handleSubmit()" novalidate>
+        <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
+          <form.Field name="name" :validators="{ onChange: required('Le nom est requis.') }" v-slot="{ field }">
+            <FormField label="Nom" for="set-name" required :error="field.state.meta.errors[0]">
+              <Input
+                id="set-name"
+                :model-value="field.state.value"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="slug" :validators="{ onChange: validateSlug }" v-slot="{ field }">
+            <FormField label="Slug" for="set-slug" required :error="field.state.meta.errors[0]">
+              <Input
+                id="set-slug"
+                :model-value="field.state.value"
+                placeholder="ex: base-set"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="release_date" v-slot="{ field }">
+            <FormField label="Date de sortie" for="set-release">
+              <Input
+                id="set-release"
+                :model-value="field.state.value"
+                type="date"
+                @update:model-value="(v) => field.handleChange(String(v))"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="logo_url" v-slot="{ field }">
+            <FormField label="URL du logo" for="set-logo">
+              <Input
+                id="set-logo"
+                :model-value="field.state.value"
+                placeholder="Optionnel"
+                @update:model-value="(v) => field.handleChange(String(v))"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="symbol_url" v-slot="{ field }">
+            <FormField label="URL du symbole" for="set-symbol" class="sm:col-span-2">
+              <Input
+                id="set-symbol"
+                :model-value="field.state.value"
+                placeholder="Optionnel"
+                @update:model-value="(v) => field.handleChange(String(v))"
+              />
+            </FormField>
+          </form.Field>
+        </div>
+
+        <Separator />
+        <SheetFooter>
+          <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+          <div class="flex gap-3">
+            <Button type="submit" :disabled="saveMutation.isPending.value">
+              {{ saveMutation.isPending.value ? 'Enregistrement...' : editingId ? 'Mettre à jour le set' : 'Créer le set' }}
+            </Button>
+            <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
           </div>
-
-          <SheetFooter class="border-t">
-            <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
-            <div class="flex gap-3">
-              <Button type="submit" :disabled="saving">
-                {{ saving ? 'Enregistrement...' : editingId ? 'Mettre à jour le set' : 'Créer le set' }}
-              </Button>
-              <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
-            </div>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
-  </div>
+        </SheetFooter>
+      </form>
+    </SheetContent>
+  </Sheet>
 </template>

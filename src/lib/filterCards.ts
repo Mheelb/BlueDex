@@ -19,7 +19,7 @@ function compareNumbers(a: string, b: string) {
   return a.localeCompare(b)
 }
 
-export function filterAndSortCards(cards: Card[], filters: CardFilters): Card[] {
+export function filterAndSortCards<T extends Card>(cards: T[], filters: CardFilters): T[] {
   const query = filters.search.trim().toLowerCase()
 
   const result = cards.filter((card) => {

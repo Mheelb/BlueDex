@@ -10,11 +10,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import type { ButtonVariants } from '@/components/ui/button'
 
-defineProps<{
-  title: string
-  description: string
-}>()
+withDefaults(
+  defineProps<{
+    title: string
+    description: string
+    confirmLabel?: string
+    variant?: ButtonVariants['variant']
+  }>(),
+  {
+    confirmLabel: 'Supprimer',
+    variant: 'destructive',
+  },
+)
 
 const emit = defineEmits<{
   confirm: []
@@ -33,7 +42,7 @@ const emit = defineEmits<{
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel>Annuler</AlertDialogCancel>
-        <AlertDialogAction variant="destructive" @click="emit('confirm')">Supprimer</AlertDialogAction>
+        <AlertDialogAction :variant="variant" @click="emit('confirm')">{{ confirmLabel }}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

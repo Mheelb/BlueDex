@@ -3,10 +3,11 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { LayoutDashboardIcon, LogOutIcon, MoonIcon, NewspaperIcon, SunIcon } from '@lucide/vue'
 import { useAuthUser } from '@/composables/useAuthUser'
+import { useProfile } from '@/composables/useProfile'
 import { useDarkMode } from '@/composables/useDarkMode'
 import { supabase } from '@/lib/supabase'
 import Button from './ui/button/Button.vue'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,12 +18,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 const { session } = useAuthUser()
+const { data: profile, isAdmin } = useProfile()
 const { isDark, toggle } = useDarkMode()
 const router = useRouter()
 
 const userInitials = computed(() => {
-  const email = session.value?.user.email ?? ''
-  return email.slice(0, 2).toUpperCase() || '?'
+  const name = profile.value?.display_name ?? session.value?.user.email ?? ''
+  return name.slice(0, 2).toUpperCase() || '?'
 })
 
 async function onLogout() {
@@ -118,27 +120,31 @@ watch(
           <DropdownMenuTrigger as-child>
             <button class="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <Avatar>
+                <AvatarImage v-if="profile?.avatar_url" :src="profile.avatar_url" />
                 <AvatarFallback class="bg-primary text-primary-foreground">{{ userInitials }}</AvatarFallback>
               </Avatar>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" class="w-56">
             <DropdownMenuLabel class="truncate font-normal text-muted-foreground">
-              {{ session.user.email }}
+              {{ profile?.display_name ?? session.user.email }}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem as-child>
-              <RouterLink :to="{ name: 'admin-sets' }">
-                <LayoutDashboardIcon />
-                Dashboard
-              </RouterLink>
-            </DropdownMenuItem>
-            <DropdownMenuItem as-child>
-              <RouterLink :to="{ name: 'admin-articles' }">
-                <NewspaperIcon />
-                Articles
-              </RouterLink>
-            </DropdownMenuItem>
+            <template v-if="isAdmin">
+              <DropdownMenuItem as-child>
+                <RouterLink :to="{ name: 'admin-sets' }">
+                  <LayoutDashboardIcon />
+                  Dashboard
+                </RouterLink>
+              </DropdownMenuItem>
+              <DropdownMenuItem as-child>
+                <RouterLink :to="{ name: 'admin-articles' }">
+                  <NewspaperIcon />
+                  Articles
+                </RouterLink>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </template>
             <DropdownMenuItem variant="destructive" @click="onLogout">
               <LogOutIcon />
               Déconnexion
@@ -146,7 +152,7 @@ watch(
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <RouterLink v-else :to="{ name: 'admin-login' }">
+        <RouterLink v-else :to="{ name: 'login' }">
           <Button variant="outline" size="lg">Connexion</Button>
         </RouterLink>
       </div>

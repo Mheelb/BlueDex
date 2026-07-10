@@ -10,8 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.2.8",
     "@lucide/vue": "^1.24.0",
     "@supabase/supabase-js": "^2.110.2",
+    "@tanstack/pacer": "^0.21.1",
+    "@tanstack/vue-form": "^1.33.1",
+    "@tanstack/vue-query": "^5.101.2",
+    "@tanstack/vue-table": "^8.21.3",
+    "@tanstack/vue-virtual": "^3.13.31",
     "@vueuse/core": "^14.3.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -22,11 +28,13 @@
     "reka-ui": "^2.10.1",
     "tailwind-merge": "^3.6.0",
     "vue": "^3.5.39",
-    "vue-router": "^5.1.0"
+    "vue-router": "^5.1.0",
+    "vue-sonner": "^2.0.9"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.2",
+    "@tanstack/vue-query-devtools": "^6.1.36",
     "@types/dompurify": "^3.2.0",
     "@types/node": "^24.13.2",
     "@vitejs/plugin-vue": "^6.0.7",

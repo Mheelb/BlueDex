@@ -1,66 +1,82 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useMutation } from '@tanstack/vue-query'
+import { useForm } from '@tanstack/vue-form'
 import { supabase } from '@/lib/supabase'
+import { required } from '@/lib/formValidators'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import FormField from '@/components/FormField.vue'
 
 const route = useRoute()
 const router = useRouter()
 
-const email = ref('')
-const password = ref('')
-const loading = ref(false)
-const error = ref<string | null>(null)
-
-async function onSubmit() {
-  loading.value = true
-  error.value = null
-
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: email.value,
-    password: password.value,
-  })
-
-  loading.value = false
-
-  if (signInError) {
-    error.value = signInError.message
-    return
-  }
-
-  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : undefined
-  router.push(redirect ?? { name: 'admin-sets' })
+function emptyForm() {
+  return { email: '', password: '' }
 }
+
+const signInMutation = useMutation({
+  mutationFn: async (value: ReturnType<typeof emptyForm>) => {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: value.email,
+      password: value.password,
+    })
+    if (signInError) throw new Error(signInError.message)
+  },
+  onSuccess: () => {
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : undefined
+    router.push(redirect ?? { name: 'admin-sets' })
+  },
+})
+
+const form = useForm({
+  defaultValues: emptyForm(),
+  onSubmit: async ({ value }) => {
+    await signInMutation.mutateAsync(value)
+  },
+})
 </script>
 
 <template>
-  <div class="mx-auto max-w-sm px-4 py-16">
-    <Card>
-      <CardHeader>
-        <CardTitle class="text-xl">Connexion admin</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
-          <div class="flex flex-col gap-1.5">
-            <Label for="email">Email</Label>
-            <Input id="email" v-model="email" type="email" required autocomplete="username" />
-          </div>
+  <Card class="mx-auto w-full max-w-sm">
+    <CardHeader>
+      <CardTitle class="text-xl">Connexion admin</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <form class="flex flex-col gap-4" @submit.prevent="() => form.handleSubmit()">
+        <form.Field name="email" :validators="{ onChange: required('Email requis.') }" v-slot="{ field }">
+          <FormField label="Email" for="email" required :error="field.state.meta.errors[0]">
+            <Input
+              id="email"
+              :model-value="field.state.value"
+              type="email"
+              autocomplete="username"
+              @update:model-value="(v) => field.handleChange(String(v))"
+              @blur="field.handleBlur"
+            />
+          </FormField>
+        </form.Field>
 
-          <div class="flex flex-col gap-1.5">
-            <Label for="password">Mot de passe</Label>
-            <Input id="password" v-model="password" type="password" required autocomplete="current-password" />
-          </div>
+        <form.Field name="password" :validators="{ onChange: required('Mot de passe requis.') }" v-slot="{ field }">
+          <FormField label="Mot de passe" for="password" required :error="field.state.meta.errors[0]">
+            <Input
+              id="password"
+              :model-value="field.state.value"
+              type="password"
+              autocomplete="current-password"
+              @update:model-value="(v) => field.handleChange(String(v))"
+              @blur="field.handleBlur"
+            />
+          </FormField>
+        </form.Field>
 
-          <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+        <p v-if="signInMutation.error.value" class="text-sm text-destructive">{{ signInMutation.error.value.message }}</p>
 
-          <Button type="submit" :disabled="loading">
-            {{ loading ? 'Connexion...' : 'Se connecter' }}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
-  </div>
+        <Button type="submit" :disabled="signInMutation.isPending.value">
+          {{ signInMutation.isPending.value ? 'Connexion...' : 'Se connecter' }}
+        </Button>
+      </form>
+    </CardContent>
+  </Card>
 </template>

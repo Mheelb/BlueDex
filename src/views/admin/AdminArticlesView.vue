@@ -1,26 +1,35 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { ref } from 'vue'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useForm } from '@tanstack/vue-form'
 import { PencilIcon, SparklesIcon, Trash2Icon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
 import type { Article } from '@/types/article'
+import { articleKeys, fetchAdminArticles } from '@/queries/articles'
+import { required } from '@/lib/formValidators'
 import BackButton from '@/components/BackButton.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Separator } from '@/components/ui/separator'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
+import FormField from '@/components/FormField.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import QueryState from '@/components/QueryState.vue'
 
-const articles = ref<Article[]>([])
-const loading = ref(true)
+const queryClient = useQueryClient()
+
+const { data: articles, isPending: loading } = useQuery({
+  queryKey: articleKeys.admin(),
+  queryFn: fetchAdminArticles,
+})
+
 const error = ref<string | null>(null)
-const generating = ref(false)
-const saving = ref(false)
 const sheetOpen = ref(false)
 const editingId = ref<string | null>(null)
-const fieldErrors = ref<Record<string, string>>({})
 
 function emptyForm() {
   return {
@@ -32,144 +41,136 @@ function emptyForm() {
   }
 }
 
-const form = reactive(emptyForm())
+const generateMutation = useMutation({
+  mutationFn: async () => {
+    const { error: invokeError } = await supabase.functions.invoke('generate-article')
+    if (invokeError) throw new Error(invokeError.message)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: articleKeys.all })
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
 
-async function load() {
-  loading.value = true
-  const { data, error: fetchError } = await supabase
-    .from('articles')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (fetchError) {
-    error.value = fetchError.message
-  } else {
-    articles.value = data as Article[]
-  }
-  loading.value = false
-}
-
-onMounted(load)
-
-async function onGenerate() {
-  generating.value = true
+function onGenerate() {
   error.value = null
-
-  const { error: invokeError } = await supabase.functions.invoke('generate-article')
-
-  generating.value = false
-
-  if (invokeError) {
-    error.value = invokeError.message
-    return
-  }
-
-  await load()
+  generateMutation.mutate()
 }
+
+const saveMutation = useMutation({
+  mutationFn: async (value: ReturnType<typeof emptyForm>) => {
+    const { error: saveError } = await supabase
+      .from('articles')
+      .update({
+        title: value.title,
+        slug: value.slug,
+        excerpt: value.excerpt,
+        content: value.content,
+        cover_image_url: value.cover_image_url || null,
+      })
+      .eq('id', editingId.value)
+
+    if (saveError) throw new Error(saveError.message)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: articleKeys.all })
+    sheetOpen.value = false
+    resetForm()
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
+
+const form = useForm({
+  defaultValues: emptyForm(),
+  onSubmit: async ({ value }) => {
+    if (!editingId.value) return
+    await saveMutation.mutateAsync(value)
+  },
+})
 
 function resetForm() {
   editingId.value = null
-  Object.assign(form, emptyForm())
-  fieldErrors.value = {}
+  form.reset(emptyForm())
   error.value = null
 }
+
+const validateExcerpt = required("L'extrait est requis.")
 
 function openEditSheet(article: Article) {
   resetForm()
   editingId.value = article.id
-  form.title = article.title
-  form.slug = article.slug
-  form.excerpt = article.excerpt
-  form.content = article.content
-  form.cover_image_url = article.cover_image_url ?? ''
+  form.reset({
+    title: article.title,
+    slug: article.slug,
+    excerpt: article.excerpt,
+    content: article.content,
+    cover_image_url: article.cover_image_url ?? '',
+  })
   sheetOpen.value = true
 }
 
-function validate(): boolean {
-  const errors: Record<string, string> = {}
-  if (!form.title.trim()) errors.title = 'Le titre est requis.'
-  if (!form.slug.trim()) errors.slug = 'Le slug est requis.'
-  if (!form.excerpt.trim()) errors.excerpt = "L'extrait est requis."
-  if (!form.content.trim()) errors.content = 'Le contenu est requis.'
-  fieldErrors.value = errors
-  return Object.keys(errors).length === 0
+const togglePublishMutation = useMutation({
+  mutationFn: async (article: Article) => {
+    const nextStatus = article.status === 'published' ? 'draft' : 'published'
+    const { error: updateError } = await supabase
+      .from('articles')
+      .update({
+        status: nextStatus,
+        published_at: nextStatus === 'published' ? new Date().toISOString() : null,
+      })
+      .eq('id', article.id)
+
+    if (updateError) throw new Error(updateError.message)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: articleKeys.all })
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
+
+function onTogglePublish(article: Article) {
+  togglePublishMutation.mutate(article)
 }
 
-async function onSave() {
-  if (!editingId.value) return
-  if (!validate()) return
+const deleteMutation = useMutation({
+  mutationFn: async (article: Article) => {
+    const { error: deleteError } = await supabase.from('articles').delete().eq('id', article.id)
+    if (deleteError) throw new Error(deleteError.message)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: articleKeys.all })
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
 
-  saving.value = true
-  error.value = null
-
-  const { error: saveError } = await supabase
-    .from('articles')
-    .update({
-      title: form.title,
-      slug: form.slug,
-      excerpt: form.excerpt,
-      content: form.content,
-      cover_image_url: form.cover_image_url || null,
-    })
-    .eq('id', editingId.value)
-
-  saving.value = false
-
-  if (saveError) {
-    error.value = saveError.message
-    return
-  }
-
-  sheetOpen.value = false
-  resetForm()
-  await load()
-}
-
-async function onTogglePublish(article: Article) {
-  const nextStatus = article.status === 'published' ? 'draft' : 'published'
-  const { error: updateError } = await supabase
-    .from('articles')
-    .update({
-      status: nextStatus,
-      published_at: nextStatus === 'published' ? new Date().toISOString() : null,
-    })
-    .eq('id', article.id)
-
-  if (updateError) {
-    error.value = updateError.message
-    return
-  }
-  await load()
-}
-
-async function onDelete(article: Article) {
-  const { error: deleteError } = await supabase.from('articles').delete().eq('id', article.id)
-  if (deleteError) {
-    error.value = deleteError.message
-    return
-  }
-  await load()
+function onDelete(article: Article) {
+  deleteMutation.mutate(article)
 }
 </script>
 
 <template>
-  <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-    <BackButton :to="{ name: 'admin-sets' }" label="Retour aux sets" class="mb-4" />
+  <BackButton :to="{ name: 'admin-sets' }" label="Retour aux sets" class="mb-4" />
 
-    <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold">Admin · Articles</h1>
-      <Button :disabled="generating" @click="onGenerate">
-        <SparklesIcon />
-        {{ generating ? 'Génération...' : 'Générer un nouvel article' }}
-      </Button>
-    </div>
+  <PageHeader title="Admin · Articles">
+    <Button :disabled="generateMutation.isPending.value" @click="onGenerate">
+      <SparklesIcon />
+      {{ generateMutation.isPending.value ? 'Génération...' : 'Générer un nouvel article' }}
+    </Button>
+  </PageHeader>
 
-    <p v-if="error" class="mb-4 text-sm text-destructive">{{ error }}</p>
-    <p v-if="loading" class="text-muted-foreground">Chargement...</p>
-    <p v-else-if="articles.length === 0" class="text-muted-foreground">Aucun article pour le moment.</p>
+  <p v-if="error" class="mb-4 text-sm text-destructive">{{ error }}</p>
 
-    <div v-else class="flex flex-col gap-3">
-      <Card v-for="article in articles" :key="article.id">
+  <QueryState :loading="loading" :empty="articles?.length === 0" empty-message="Aucun article pour le moment.">
+    <div class="flex flex-col gap-3">
+      <Card v-for="article in articles ?? []" :key="article.id">
         <CardContent class="flex items-center justify-between gap-4">
           <div class="min-w-0">
             <div class="flex items-center gap-2">
@@ -200,52 +201,86 @@ async function onDelete(article: Article) {
         </CardContent>
       </Card>
     </div>
+  </QueryState>
 
-    <Sheet v-model:open="sheetOpen">
-      <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
-        <SheetHeader class="border-b">
-          <SheetTitle>Modifier l'article</SheetTitle>
-        </SheetHeader>
+  <Sheet v-model:open="sheetOpen">
+    <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
+      <SheetHeader>
+        <SheetTitle>Modifier l'article</SheetTitle>
+      </SheetHeader>
+      <Separator />
 
-        <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSave" novalidate>
-          <div class="grid grid-cols-1 gap-3 p-4">
-            <div class="flex flex-col gap-1.5">
-              <Label for="article-title">Titre *</Label>
-              <Input id="article-title" v-model="form.title" :aria-invalid="!!fieldErrors.title" />
-              <p v-if="fieldErrors.title" class="text-xs text-destructive">{{ fieldErrors.title }}</p>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="article-slug">Slug *</Label>
-              <Input id="article-slug" v-model="form.slug" :aria-invalid="!!fieldErrors.slug" />
-              <p v-if="fieldErrors.slug" class="text-xs text-destructive">{{ fieldErrors.slug }}</p>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="article-excerpt">Extrait *</Label>
-              <Textarea id="article-excerpt" v-model="form.excerpt" rows="2" :aria-invalid="!!fieldErrors.excerpt" />
-              <p v-if="fieldErrors.excerpt" class="text-xs text-destructive">{{ fieldErrors.excerpt }}</p>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="article-cover">URL de l'image de couverture</Label>
-              <Input id="article-cover" v-model="form.cover_image_url" placeholder="Optionnel" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="article-content">Contenu (markdown) *</Label>
-              <Textarea id="article-content" v-model="form.content" rows="14" :aria-invalid="!!fieldErrors.content" />
-              <p v-if="fieldErrors.content" class="text-xs text-destructive">{{ fieldErrors.content }}</p>
-            </div>
+      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="() => form.handleSubmit()" novalidate>
+        <div class="grid grid-cols-1 gap-3 p-4">
+          <form.Field name="title" :validators="{ onChange: required('Le titre est requis.') }" v-slot="{ field }">
+            <FormField label="Titre" for="article-title" required :error="field.state.meta.errors[0]">
+              <Input
+                id="article-title"
+                :model-value="field.state.value"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="slug" :validators="{ onChange: required('Le slug est requis.') }" v-slot="{ field }">
+            <FormField label="Slug" for="article-slug" required :error="field.state.meta.errors[0]">
+              <Input
+                id="article-slug"
+                :model-value="field.state.value"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="excerpt" :validators="{ onChange: validateExcerpt }" v-slot="{ field }">
+            <FormField label="Extrait" for="article-excerpt" required :error="field.state.meta.errors[0]">
+              <Textarea
+                id="article-excerpt"
+                :model-value="field.state.value"
+                rows="2"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="cover_image_url" v-slot="{ field }">
+            <FormField label="URL de l'image de couverture" for="article-cover">
+              <Input
+                id="article-cover"
+                :model-value="field.state.value"
+                placeholder="Optionnel"
+                @update:model-value="(v) => field.handleChange(String(v))"
+              />
+            </FormField>
+          </form.Field>
+          <form.Field name="content" :validators="{ onChange: required('Le contenu est requis.') }" v-slot="{ field }">
+            <FormField label="Contenu (markdown)" for="article-content" required :error="field.state.meta.errors[0]">
+              <Textarea
+                id="article-content"
+                :model-value="field.state.value"
+                rows="14"
+                :aria-invalid="field.state.meta.errors.length > 0"
+                @update:model-value="(v) => field.handleChange(String(v))"
+                @blur="field.handleBlur"
+              />
+            </FormField>
+          </form.Field>
+        </div>
+
+        <Separator />
+        <SheetFooter>
+          <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+          <div class="flex gap-3">
+            <Button type="submit" :disabled="saveMutation.isPending.value">
+              {{ saveMutation.isPending.value ? 'Enregistrement...' : 'Enregistrer' }}
+            </Button>
+            <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
           </div>
-
-          <SheetFooter class="border-t">
-            <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
-            <div class="flex gap-3">
-              <Button type="submit" :disabled="saving">
-                {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
-              </Button>
-              <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
-            </div>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
-  </div>
+        </SheetFooter>
+      </form>
+    </SheetContent>
+  </Sheet>
 </template>

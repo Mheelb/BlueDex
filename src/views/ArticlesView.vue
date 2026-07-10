@@ -1,46 +1,35 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
 import { NewspaperIcon } from '@lucide/vue'
-import { supabase } from '@/lib/supabase'
-import type { Article } from '@/types/article'
+import { useQuery } from '@tanstack/vue-query'
+import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
+import QueryState from '@/components/QueryState.vue'
+import Heading from '@/components/Heading.vue'
 
-const articles = ref<Article[]>([])
-const loading = ref(true)
-const error = ref<string | null>(null)
+const { data: articles, isPending: loading, error } = useQuery({
+  queryKey: articleKeys.published(),
+  queryFn: () => fetchPublishedArticles(),
+})
 
 function formatDate(date: string | null) {
   if (!date) return ''
   return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 }
-
-onMounted(async () => {
-  const { data, error: fetchError } = await supabase
-    .from('articles')
-    .select('*')
-    .eq('status', 'published')
-    .order('published_at', { ascending: false })
-
-  if (fetchError) {
-    error.value = fetchError.message
-  } else {
-    articles.value = data as Article[]
-  }
-  loading.value = false
-})
 </script>
 
 <template>
-  <div class="mx-auto max-w-screen-lg px-4 py-8 sm:px-6 lg:px-8">
-    <h1 class="text-3xl font-bold">Actus</h1>
-    <p class="mt-1 text-sm text-muted-foreground">Cartes, factions, decks : les derniers articles autour de Blue Rising.</p>
+  <Heading>Actus</Heading>
+  <p class="mt-1 text-sm text-muted-foreground">Cartes, factions, decks : les derniers articles autour de Blue Rising.</p>
 
-    <p v-if="loading" class="mt-8 text-muted-foreground">Chargement...</p>
-    <p v-else-if="error" class="mt-8 text-destructive">{{ error }}</p>
-    <p v-else-if="articles.length === 0" class="mt-8 text-muted-foreground">Aucun article pour le moment.</p>
-
-    <div v-else class="mt-8 flex flex-col gap-6">
+  <QueryState
+    class="mt-8"
+    :loading="loading"
+    :error="error?.message"
+    :empty="articles?.length === 0"
+    empty-message="Aucun article pour le moment."
+  >
+    <div class="mt-8 flex flex-col gap-6">
       <RouterLink
-        v-for="article in articles"
+        v-for="article in articles ?? []"
         :key="article.id"
         :to="{ name: 'article', params: { slug: article.slug } }"
         class="group flex gap-4 rounded-xl border bg-card p-4 transition-colors hover:bg-muted/50"
@@ -59,10 +48,10 @@ onMounted(async () => {
 
         <div class="min-w-0">
           <p class="text-xs text-muted-foreground">{{ formatDate(article.published_at) }}</p>
-          <h2 class="mt-1 text-lg font-semibold group-hover:underline">{{ article.title }}</h2>
+          <Heading as="h2" size="lg" class="mt-1 group-hover:underline">{{ article.title }}</Heading>
           <p class="mt-1 line-clamp-2 text-sm text-muted-foreground">{{ article.excerpt }}</p>
         </div>
       </RouterLink>
     </div>
-  </div>
+  </QueryState>
 </template>

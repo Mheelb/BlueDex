@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import TextLink from '@/components/TextLink.vue'
+
 const year = new Date().getFullYear()
 </script>
 
@@ -16,18 +18,18 @@ const year = new Date().getFullYear()
         <nav class="flex flex-wrap gap-x-8 gap-y-4 text-sm">
           <div class="flex flex-col gap-2">
             <p class="font-medium text-foreground">Naviguer</p>
-            <RouterLink :to="{ name: 'sets' }" class="text-muted-foreground hover:text-foreground">Sets</RouterLink>
-            <RouterLink :to="{ name: 'deck-builder' }" class="text-muted-foreground hover:text-foreground">
+            <TextLink :to="{ name: 'sets' }">Sets</TextLink>
+            <TextLink :to="{ name: 'deck-builder' }">
               Deck Builder
-            </RouterLink>
-            <RouterLink :to="{ name: 'articles' }" class="text-muted-foreground hover:text-foreground">Actus</RouterLink>
+            </TextLink>
+            <TextLink :to="{ name: 'articles' }">Actus</TextLink>
           </div>
 
           <div class="flex flex-col gap-2">
             <p class="font-medium text-foreground">Admin</p>
-            <RouterLink :to="{ name: 'admin-login' }" class="text-muted-foreground hover:text-foreground">
+            <TextLink :to="{ name: 'admin-login' }">
               Connexion
-            </RouterLink>
+            </TextLink>
           </div>
         </nav>
       </div>

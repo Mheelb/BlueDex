@@ -1,6 +1,14 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
+import 'vue-sonner/style.css'
+import { Toaster } from 'vue-sonner'
 import AppHeader from '@/components/AppHeader.vue'
 import AppFooter from '@/components/AppFooter.vue'
+import PageContainer from '@/components/PageContainer.vue'
+
+const VueQueryDevtools = import.meta.env.DEV
+  ? defineAsyncComponent(() => import('@tanstack/vue-query-devtools').then((m) => m.VueQueryDevtools))
+  : null
 </script>
 
 <template>
@@ -8,9 +16,13 @@ import AppFooter from '@/components/AppFooter.vue'
     <div class="bg-grid-fade pointer-events-none absolute inset-x-0 top-0 -z-10 h-screen" aria-hidden="true" />
     <AppHeader />
     <main class="flex-1">
-      <RouterView />
+      <PageContainer>
+        <RouterView />
+      </PageContainer>
     </main>
     <AppFooter />
+    <Toaster theme="light" />
+    <component :is="VueQueryDevtools" v-if="VueQueryDevtools" />
   </div>
 </template>
 

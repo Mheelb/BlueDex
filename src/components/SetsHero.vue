@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { CardSet } from '@/types/card'
 import { Badge } from '@/components/ui/badge'
+import Heading from '@/components/Heading.vue'
 
 const props = defineProps<{
   sets: CardSet[]
@@ -14,7 +15,7 @@ const totalCards = computed(() => props.sets.reduce((sum, s) => sum + s.card_cou
 <template>
   <div class="mb-10 border-b pb-8">
     <p class="text-sm font-semibold tracking-wide text-primary uppercase">TCG · Blue Rising</p>
-    <h1 class="mt-2 text-5xl font-extrabold tracking-tight">BlueDex</h1>
+    <Heading size="hero" class="mt-2">BlueDex</Heading>
     <p class="mt-3 max-w-xl text-muted-foreground">
       Parcours chaque set, filtre les cartes par rareté, type ou faction, et découvre le détail de chacune d'elles.
     </p>

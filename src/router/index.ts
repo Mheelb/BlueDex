@@ -20,6 +20,17 @@ const router = createRouter({
       component: () => import('@/views/DeckBuilderView.vue'),
     },
     {
+      path: '/decks/builder',
+      name: 'deck-builder-new',
+      component: () => import('@/views/DeckEditorView.vue'),
+    },
+    {
+      path: '/decks/builder/:deckId',
+      name: 'deck-builder-edit',
+      component: () => import('@/views/DeckEditorView.vue'),
+      props: true,
+    },
+    {
       path: '/actus',
       name: 'articles',
       component: () => import('@/views/ArticlesView.vue'),
@@ -41,6 +52,16 @@ const router = createRouter({
       name: 'card',
       component: () => import('@/views/CardView.vue'),
       props: true,
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/LoginView.vue'),
+    },
+    {
+      path: '/signup',
+      name: 'signup',
+      component: () => import('@/views/SignupView.vue'),
     },
     {
       path: '/admin',
@@ -67,13 +88,28 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  const requiresAuth = to.name === 'admin-sets' || to.name === 'admin-set-cards' || to.name === 'admin-articles'
-  if (!requiresAuth) return true
+  const requiresSession = to.name === 'deck-builder-new' || to.name === 'deck-builder-edit'
+  const requiresAdmin = to.name === 'admin-sets' || to.name === 'admin-set-cards' || to.name === 'admin-articles'
+  if (!requiresSession && !requiresAdmin) return true
 
   const { data } = await supabase.auth.getSession()
   if (!data.session) {
-    return { name: 'admin-login', query: { redirect: to.fullPath } }
+    return requiresAdmin
+      ? { name: 'admin-login', query: { redirect: to.fullPath } }
+      : { name: 'login', query: { redirect: to.fullPath } }
   }
+
+  if (requiresAdmin) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', data.session.user.id)
+      .single()
+    if (!profile?.is_admin) {
+      return { name: 'admin-login', query: { redirect: to.fullPath } }
+    }
+  }
+
   return true
 })
 

@@ -1,66 +1,43 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { LayersIcon } from '@lucide/vue'
+import { computed, ref } from 'vue'
 import Autoplay from 'embla-carousel-autoplay'
-import { supabase } from '@/lib/supabase'
-import type { Card, CardSet } from '@/types/card'
-import type { Article } from '@/types/article'
+import { useQuery } from '@tanstack/vue-query'
 import { Badge } from '@/components/ui/badge'
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel'
+import { fetchSets, setKeys } from '@/queries/sets'
+import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
+import { cardKeys, fetchFeaturedCards } from '@/queries/cards'
 import HomeHero from '@/components/HomeHero.vue'
+import SetCard from '@/components/SetCard.vue'
+import QueryState from '@/components/QueryState.vue'
+import Heading from '@/components/Heading.vue'
+import TextLink from '@/components/TextLink.vue'
 
-const sets = ref<CardSet[]>([])
-const loading = ref(true)
-const error = ref<string | null>(null)
-const featuredCards = ref<Card[]>([])
-const featuredSetSlug = ref('')
-const latestArticles = ref<Article[]>([])
+const { data: sets, isPending: loading, error } = useQuery({
+  queryKey: setKeys.list('release_date'),
+  queryFn: () => fetchSets('release_date'),
+})
 
-const totalCards = computed(() => sets.value.reduce((sum, s) => sum + s.card_count, 0))
+const totalCards = computed(() => (sets.value ?? []).reduce((sum, s) => sum + s.card_count, 0))
 
 const newestSetId = computed(() => {
-  const withDate = sets.value.filter((s) => s.release_date)
+  const withDate = (sets.value ?? []).filter((s) => s.release_date)
   if (withDate.length === 0) return null
   return withDate.reduce((latest, s) => (s.release_date! > latest.release_date! ? s : latest)).id
 })
 
-function formatDate(date: string | null) {
-  if (!date) return null
-  return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-}
+const setWithCards = computed(() => (sets.value ?? []).find((s) => s.card_count > 0))
+const featuredSetSlug = computed(() => setWithCards.value?.slug ?? '')
 
-onMounted(async () => {
-  const { data, error: fetchError } = await supabase
-    .from('sets')
-    .select('*')
-    .order('release_date', { ascending: false })
+const { data: featuredCards } = useQuery({
+  queryKey: computed(() => cardKeys.featured(setWithCards.value?.id ?? '')),
+  queryFn: () => fetchFeaturedCards(setWithCards.value!.id, 3),
+  enabled: computed(() => !!setWithCards.value),
+})
 
-  if (fetchError) {
-    error.value = fetchError.message
-  } else {
-    sets.value = data as CardSet[]
-  }
-  loading.value = false
-
-  const setWithCards = sets.value.find((s) => s.card_count > 0)
-  if (setWithCards) {
-    featuredSetSlug.value = setWithCards.slug
-    const { data: cardsData } = await supabase
-      .from('cards')
-      .select('*')
-      .eq('set_id', setWithCards.id)
-      .order('is_holo', { ascending: false })
-      .limit(3)
-    featuredCards.value = (cardsData as Card[]) ?? []
-  }
-
-  const { data: articlesData } = await supabase
-    .from('articles')
-    .select('*')
-    .eq('status', 'published')
-    .order('published_at', { ascending: false })
-    .limit(4)
-  latestArticles.value = (articlesData as Article[]) ?? []
+const { data: latestArticles } = useQuery({
+  queryKey: articleKeys.published(4),
+  queryFn: () => fetchPublishedArticles(4),
 })
 
 const setsCarouselApi = ref<CarouselApi>()
@@ -93,20 +70,16 @@ function goToArticleSlide(index: number) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
-    <HomeHero :featured-cards="featuredCards" :featured-set-slug="featuredSetSlug" :total-cards="totalCards" />
+  <HomeHero :featured-cards="featuredCards ?? []" :featured-set-slug="featuredSetSlug" :total-cards="totalCards" />
 
-    <p v-if="loading" class="text-muted-foreground">Chargement...</p>
-    <p v-else-if="error" class="text-destructive">{{ error }}</p>
-    <p v-else-if="sets.length === 0" class="text-muted-foreground">Aucun set pour le moment.</p>
-
-    <div v-else>
-      <div v-if="latestArticles.length > 0" class="mb-10">
+  <QueryState :loading="loading" :error="error?.message" :empty="sets?.length === 0" empty-message="Aucun set pour le moment.">
+    <div>
+      <div v-if="(latestArticles ?? []).length > 0" class="mb-10">
         <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold">À la une</h2>
-          <RouterLink :to="{ name: 'articles' }" class="text-sm text-primary hover:underline">
+          <Heading as="h2" size="lg">À la une</Heading>
+          <TextLink :to="{ name: 'articles' }" variant="primary">
             Tous les articles
-          </RouterLink>
+          </TextLink>
         </div>
 
         <Carousel
@@ -117,7 +90,7 @@ function goToArticleSlide(index: number) {
         >
           <CarouselContent>
             <CarouselItem
-              v-for="(article, index) in latestArticles"
+              v-for="(article, index) in latestArticles ?? []"
               :key="article.id"
               class="basis-full sm:basis-1/2 lg:basis-1/3"
             >
@@ -145,22 +118,26 @@ function goToArticleSlide(index: number) {
           </CarouselContent>
         </Carousel>
 
-        <div v-if="latestArticles.length > 1" class="mt-4 flex justify-center">
+        <div v-if="(latestArticles ?? []).length > 1" class="mt-4 flex justify-center">
           <div class="flex items-center gap-2 rounded-full border bg-card px-3 py-2 shadow-sm">
             <button
-              v-for="(article, index) in latestArticles"
+              v-for="(article, index) in latestArticles ?? []"
               :key="article.id"
               type="button"
-              class="size-2.5 rounded-full transition-colors"
-              :class="articlesSelectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
+              class="flex size-6 items-center justify-center"
               :aria-label="`Aller à ${article.title}`"
               @click="goToArticleSlide(index)"
-            />
+            >
+              <span
+                class="size-2.5 rounded-full transition-colors"
+                :class="articlesSelectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
+              />
+            </button>
           </div>
         </div>
       </div>
 
-      <h2 class="mb-4 text-lg font-semibold">Sets</h2>
+      <Heading as="h2" size="lg" class="mb-4">Sets</Heading>
 
       <Carousel
         :opts="{ loop: true, align: 'start' }"
@@ -170,56 +147,32 @@ function goToArticleSlide(index: number) {
       >
         <CarouselContent>
           <CarouselItem
-            v-for="set in sets"
+            v-for="set in sets ?? []"
             :key="set.id"
             class="basis-full sm:basis-1/2 lg:basis-1/3"
           >
-            <RouterLink :to="{ name: 'set', params: { setSlug: set.slug } }" class="group block">
-              <div
-                class="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-2xl border bg-gradient-to-br from-primary to-primary/70 shadow-sm transition-shadow duration-300 group-hover:shadow-xl"
-              >
-                <Badge
-                  v-if="set.id === newestSetId"
-                  class="absolute top-3 right-3 z-10 bg-white text-primary"
-                >
-                  Nouveau
-                </Badge>
-
-                <img
-                  v-if="set.logo_url || set.symbol_url"
-                  :src="set.logo_url ?? set.symbol_url ?? undefined"
-                  :alt="set.name"
-                  class="max-h-[65%] max-w-[70%] object-contain drop-shadow-lg transition-transform duration-300 group-hover:scale-105"
-                />
-                <LayersIcon v-else class="size-20 text-primary-foreground/30" />
-              </div>
-
-              <div class="mt-3">
-                <p class="truncate text-lg font-semibold">{{ set.name }}</p>
-                <div class="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                  <span v-if="formatDate(set.release_date)">{{ formatDate(set.release_date) }}</span>
-                  <span v-if="formatDate(set.release_date)">·</span>
-                  <span>{{ set.card_count }} cartes</span>
-                </div>
-              </div>
-            </RouterLink>
+            <SetCard :set="set" :is-new="set.id === newestSetId" />
           </CarouselItem>
         </CarouselContent>
       </Carousel>
 
-      <div v-if="sets.length > 1" class="mt-6 flex justify-center">
+      <div v-if="(sets ?? []).length > 1" class="mt-6 flex justify-center">
         <div class="flex items-center gap-2 rounded-full border bg-card px-3 py-2 shadow-sm">
           <button
-            v-for="(set, index) in sets"
+            v-for="(set, index) in sets ?? []"
             :key="set.id"
             type="button"
-            class="size-2.5 rounded-full transition-colors"
-            :class="setsSelectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
+            class="flex size-6 items-center justify-center"
             :aria-label="`Aller à ${set.name}`"
             @click="goToSetSlide(index)"
-          />
+          >
+            <span
+              class="size-2.5 rounded-full transition-colors"
+              :class="setsSelectedIndex === index ? 'bg-primary' : 'bg-muted-foreground/30'"
+            />
+          </button>
         </div>
       </div>
     </div>
-  </div>
+  </QueryState>
 </template>

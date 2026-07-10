@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Separator } from '@/components/ui/separator'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 import FormField from '@/components/FormField.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -323,9 +324,10 @@ function onDelete(card: Card) {
 
   <Sheet v-model:open="sheetOpen">
     <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
-      <SheetHeader class="border-b">
+      <SheetHeader>
         <SheetTitle>{{ editingId ? 'Modifier la carte' : 'Nouvelle carte' }}</SheetTitle>
       </SheetHeader>
+      <Separator />
 
       <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="() => form.handleSubmit()" novalidate>
         <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
@@ -534,7 +536,8 @@ function onDelete(card: Card) {
           </FormField>
         </div>
 
-        <SheetFooter class="border-t">
+        <Separator />
+        <SheetFooter>
           <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
           <div class="flex gap-3">
             <Button type="submit" :disabled="saveMutation.isPending.value || converting">

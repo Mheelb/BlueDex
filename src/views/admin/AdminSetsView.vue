@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Separator } from '@/components/ui/separator'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 import FormField from '@/components/FormField.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -219,9 +220,10 @@ async function onMigrateImages() {
 
   <Sheet v-model:open="sheetOpen">
     <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
-      <SheetHeader class="border-b">
+      <SheetHeader>
         <SheetTitle>{{ editingId ? 'Modifier le set' : 'Nouveau set' }}</SheetTitle>
       </SheetHeader>
+      <Separator />
 
       <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="() => form.handleSubmit()" novalidate>
         <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
@@ -280,7 +282,8 @@ async function onMigrateImages() {
           </form.Field>
         </div>
 
-        <SheetFooter class="border-t">
+        <Separator />
+        <SheetFooter>
           <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
           <div class="flex gap-3">
             <Button type="submit" :disabled="saveMutation.isPending.value">

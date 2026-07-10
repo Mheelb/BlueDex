@@ -6,11 +6,11 @@ import { supabase } from '@/lib/supabase'
 import type { CardSet } from '@/types/card'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
+import FormField from '@/components/FormField.vue'
 
 const router = useRouter()
 
@@ -181,28 +181,21 @@ async function onDelete(set: CardSet) {
 
       <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSubmit" novalidate>
         <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
-          <div class="flex flex-col gap-1.5">
-            <Label for="set-name">Nom *</Label>
+          <FormField label="Nom" for="set-name" required :error="fieldErrors.name">
             <Input id="set-name" v-model="form.name" :aria-invalid="!!fieldErrors.name" />
-            <p v-if="fieldErrors.name" class="text-xs text-destructive">{{ fieldErrors.name }}</p>
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="set-slug">Slug *</Label>
+          </FormField>
+          <FormField label="Slug" for="set-slug" required :error="fieldErrors.slug">
             <Input id="set-slug" v-model="form.slug" placeholder="ex: base-set" :aria-invalid="!!fieldErrors.slug" />
-            <p v-if="fieldErrors.slug" class="text-xs text-destructive">{{ fieldErrors.slug }}</p>
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="set-release">Date de sortie</Label>
+          </FormField>
+          <FormField label="Date de sortie" for="set-release">
             <Input id="set-release" v-model="form.release_date" type="date" />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="set-logo">URL du logo</Label>
+          </FormField>
+          <FormField label="URL du logo" for="set-logo">
             <Input id="set-logo" v-model="form.logo_url" placeholder="Optionnel" />
-          </div>
-          <div class="flex flex-col gap-1.5 sm:col-span-2">
-            <Label for="set-symbol">URL du symbole</Label>
+          </FormField>
+          <FormField label="URL du symbole" for="set-symbol" class="sm:col-span-2">
             <Input id="set-symbol" v-model="form.symbol_url" placeholder="Optionnel" />
-          </div>
+          </FormField>
         </div>
 
         <SheetFooter class="border-t">

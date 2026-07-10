@@ -12,12 +12,12 @@ import BackButton from '@/components/BackButton.vue'
 import CardFilters from '@/components/CardFilters.vue'
 import { Card as UiCard, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
+import FormField from '@/components/FormField.vue'
 
 const props = defineProps<{ setSlug: string }>()
 
@@ -346,52 +346,38 @@ async function onDelete(card: Card) {
 
       <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSubmit" novalidate>
         <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
-          <div class="flex flex-col gap-1.5">
-            <Label for="card-number">Numéro *</Label>
+          <FormField label="Numéro" for="card-number" required :error="fieldErrors.number">
             <Input id="card-number" v-model="form.number" :aria-invalid="!!fieldErrors.number" />
-            <p v-if="fieldErrors.number" class="text-xs text-destructive">{{ fieldErrors.number }}</p>
-          </div>
-          <div class="flex flex-col gap-1.5 sm:col-span-2">
-            <Label for="card-name">Nom *</Label>
+          </FormField>
+          <FormField label="Nom" for="card-name" required :error="fieldErrors.name" class="sm:col-span-2">
             <Input id="card-name" v-model="form.name" :aria-invalid="!!fieldErrors.name" />
-            <p v-if="fieldErrors.name" class="text-xs text-destructive">{{ fieldErrors.name }}</p>
-          </div>
+          </FormField>
 
-          <div class="flex flex-col gap-1.5 sm:col-span-3">
-            <Label>Rareté *</Label>
+          <FormField label="Rareté" required :error="fieldErrors.rarity" class="sm:col-span-3">
             <SelectField
               v-model="form.rarity"
               :options="rarityOptions"
               placeholder="Rareté"
               :class="fieldErrors.rarity ? 'border-destructive ring-destructive/20' : ''"
             />
-            <p v-if="fieldErrors.rarity" class="text-xs text-destructive">{{ fieldErrors.rarity }}</p>
-          </div>
-          <div class="flex flex-col gap-1.5 sm:col-span-3">
-            <Label>Type</Label>
+          </FormField>
+          <FormField label="Type" class="sm:col-span-3">
             <SelectField v-model="form.type" :options="typeOptions" placeholder="Type" />
-          </div>
-          <div class="flex flex-col gap-1.5 sm:col-span-3">
-            <Label>Sous-type</Label>
+          </FormField>
+          <FormField label="Sous-type" class="sm:col-span-3">
             <SelectField v-model="form.subtype" :options="subtypeOptions" placeholder="Sous-type" />
-          </div>
-          <div class="flex flex-col gap-1.5 sm:col-span-3">
-            <Label>Faction</Label>
+          </FormField>
+          <FormField label="Faction" class="sm:col-span-3">
             <SelectField v-model="form.faction" :options="factionOptions" placeholder="Faction" />
-          </div>
+          </FormField>
 
-          <div class="flex flex-col gap-1.5">
-            <Label for="card-cost">Coût</Label>
+          <FormField label="Coût" for="card-cost" :error="fieldErrors.cost">
             <Input id="card-cost" v-model="form.cost" type="number" min="0" :aria-invalid="!!fieldErrors.cost" />
-            <p v-if="fieldErrors.cost" class="text-xs text-destructive">{{ fieldErrors.cost }}</p>
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="card-power">Puissance</Label>
+          </FormField>
+          <FormField label="Puissance" for="card-power" :error="fieldErrors.power">
             <Input id="card-power" v-model="form.power" type="number" min="0" :aria-invalid="!!fieldErrors.power" />
-            <p v-if="fieldErrors.power" class="text-xs text-destructive">{{ fieldErrors.power }}</p>
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="card-support">Soutien</Label>
+          </FormField>
+          <FormField label="Soutien" for="card-support" :error="fieldErrors.support">
             <Input
               id="card-support"
               v-model="form.support"
@@ -399,18 +385,15 @@ async function onDelete(card: Card) {
               min="0"
               :aria-invalid="!!fieldErrors.support"
             />
-            <p v-if="fieldErrors.support" class="text-xs text-destructive">{{ fieldErrors.support }}</p>
-          </div>
+          </FormField>
 
-          <div class="flex flex-col gap-1.5 sm:col-span-3">
-            <Label for="card-effect">Effet de la carte</Label>
+          <FormField label="Effet de la carte" for="card-effect" class="sm:col-span-3">
             <Textarea id="card-effect" v-model="form.effect" rows="3" />
-          </div>
+          </FormField>
 
-          <div class="flex flex-col gap-1.5 sm:col-span-3">
-            <Label for="card-artist">Artiste (illustration)</Label>
+          <FormField label="Artiste (illustration)" for="card-artist" class="sm:col-span-3">
             <Input id="card-artist" v-model="form.artist" placeholder="Optionnel" />
-          </div>
+          </FormField>
 
           <div class="flex flex-wrap items-center gap-4 sm:col-span-3">
             <label class="flex items-center gap-2 text-sm">
@@ -435,8 +418,14 @@ async function onDelete(card: Card) {
             </label>
           </div>
 
-          <div v-if="form.is_numbered" class="flex flex-col gap-1.5 sm:col-span-3">
-            <Label for="card-numbered-total">Nombre d'exemplaires *</Label>
+          <FormField
+            v-if="form.is_numbered"
+            label="Nombre d'exemplaires"
+            required
+            for="card-numbered-total"
+            :error="fieldErrors.numbered_total"
+            class="sm:col-span-3"
+          >
             <Input
               id="card-numbered-total"
               v-model="form.numbered_total"
@@ -444,13 +433,12 @@ async function onDelete(card: Card) {
               min="1"
               :aria-invalid="!!fieldErrors.numbered_total"
             />
-            <p v-if="fieldErrors.numbered_total" class="text-xs text-destructive">{{ fieldErrors.numbered_total }}</p>
-          </div>
+          </FormField>
 
-          <div class="flex flex-col gap-1.5 sm:col-span-3">
-            <Label>
-              Image scannée{{ editingId ? ' (laisser vide pour garder l’actuelle)' : ' (optionnel)' }}
-            </Label>
+          <FormField
+            :label="`Image scannée${editingId ? ' (laisser vide pour garder l’actuelle)' : ' (optionnel)'}`"
+            class="sm:col-span-3"
+          >
             <input ref="fileInputEl" type="file" accept="image/*" class="hidden" @change="onFileChange" />
             <div class="flex items-center gap-2">
               <Button type="button" variant="outline" size="sm" @click="triggerFileInput">
@@ -461,7 +449,7 @@ async function onDelete(card: Card) {
                 {{ imageFile?.name ?? 'Aucun fichier sélectionné' }}
               </span>
             </div>
-          </div>
+          </FormField>
         </div>
 
         <SheetFooter class="border-t">

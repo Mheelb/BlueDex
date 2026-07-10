@@ -7,11 +7,11 @@ import BackButton from '@/components/BackButton.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
+import FormField from '@/components/FormField.vue'
 
 const articles = ref<Article[]>([])
 const loading = ref(true)
@@ -208,30 +208,21 @@ async function onDelete(article: Article) {
 
       <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSave" novalidate>
         <div class="grid grid-cols-1 gap-3 p-4">
-          <div class="flex flex-col gap-1.5">
-            <Label for="article-title">Titre *</Label>
+          <FormField label="Titre" for="article-title" required :error="fieldErrors.title">
             <Input id="article-title" v-model="form.title" :aria-invalid="!!fieldErrors.title" />
-            <p v-if="fieldErrors.title" class="text-xs text-destructive">{{ fieldErrors.title }}</p>
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="article-slug">Slug *</Label>
+          </FormField>
+          <FormField label="Slug" for="article-slug" required :error="fieldErrors.slug">
             <Input id="article-slug" v-model="form.slug" :aria-invalid="!!fieldErrors.slug" />
-            <p v-if="fieldErrors.slug" class="text-xs text-destructive">{{ fieldErrors.slug }}</p>
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="article-excerpt">Extrait *</Label>
+          </FormField>
+          <FormField label="Extrait" for="article-excerpt" required :error="fieldErrors.excerpt">
             <Textarea id="article-excerpt" v-model="form.excerpt" rows="2" :aria-invalid="!!fieldErrors.excerpt" />
-            <p v-if="fieldErrors.excerpt" class="text-xs text-destructive">{{ fieldErrors.excerpt }}</p>
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="article-cover">URL de l'image de couverture</Label>
+          </FormField>
+          <FormField label="URL de l'image de couverture" for="article-cover">
             <Input id="article-cover" v-model="form.cover_image_url" placeholder="Optionnel" />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <Label for="article-content">Contenu (markdown) *</Label>
+          </FormField>
+          <FormField label="Contenu (markdown)" for="article-content" required :error="fieldErrors.content">
             <Textarea id="article-content" v-model="form.content" rows="14" :aria-invalid="!!fieldErrors.content" />
-            <p v-if="fieldErrors.content" class="text-xs text-destructive">{{ fieldErrors.content }}</p>
-          </div>
+          </FormField>
         </div>
 
         <SheetFooter class="border-t">

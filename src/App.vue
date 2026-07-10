@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
+import 'vue-sonner/style.css'
+import { Toaster } from 'vue-sonner'
 import AppHeader from '@/components/AppHeader.vue'
 import AppFooter from '@/components/AppFooter.vue'
 import PageContainer from '@/components/PageContainer.vue'
@@ -19,6 +21,7 @@ const VueQueryDevtools = import.meta.env.DEV
       </PageContainer>
     </main>
     <AppFooter />
+    <Toaster theme="light" />
     <component :is="VueQueryDevtools" v-if="VueQueryDevtools" />
   </div>
 </template>

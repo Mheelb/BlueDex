@@ -64,11 +64,6 @@ const router = createRouter({
       component: () => import('@/views/SignupView.vue'),
     },
     {
-      path: '/admin',
-      name: 'admin-login',
-      component: () => import('@/views/admin/AdminLoginView.vue'),
-    },
-    {
       path: '/admin/sets',
       name: 'admin-sets',
       component: () => import('@/views/admin/AdminSetsView.vue'),
@@ -94,9 +89,7 @@ router.beforeEach(async (to) => {
 
   const { data } = await supabase.auth.getSession()
   if (!data.session) {
-    return requiresAdmin
-      ? { name: 'admin-login', query: { redirect: to.fullPath } }
-      : { name: 'login', query: { redirect: to.fullPath } }
+    return { name: 'login', query: { redirect: to.fullPath } }
   }
 
   if (requiresAdmin) {
@@ -106,7 +99,7 @@ router.beforeEach(async (to) => {
       .eq('id', data.session.user.id)
       .single()
     if (!profile?.is_admin) {
-      return { name: 'admin-login', query: { redirect: to.fullPath } }
+      return { name: 'login', query: { redirect: to.fullPath } }
     }
   }
 

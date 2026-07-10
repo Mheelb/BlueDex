@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVueTable, getCoreRowModel, type ColumnDef, type Updater, type PaginationState } from '@tanstack/vue-table'
-import { BookmarkIcon, ChevronLeftIcon, ChevronRightIcon, LayersIcon } from '@lucide/vue'
+import { BookmarkIcon, ChevronLeftIcon, ChevronRightIcon, LayersIcon, StarIcon } from '@lucide/vue'
 import type { DeckListItem } from '@/types/deck'
 import { DECK_FORMAT_COLORS, DECK_FORMAT_LABELS } from '@/types/deck'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -18,6 +18,7 @@ const props = defineProps<{
   pageCount: number
   showAuthor?: boolean
   bookmarkedIds: Set<string>
+  starredIds: Set<string>
   currentUserId?: string
   emptyMessage: string
 }>()
@@ -25,7 +26,13 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:pageIndex': [value: number]
   'toggle-bookmark': [deckId: string]
+  'toggle-star': [deckId: string]
 }>()
+
+function starTitle(deck: DeckListItem) {
+  if (deck.user_id === props.currentUserId) return 'Tu ne peux pas voter pour ton propre deck.'
+  return props.starredIds.has(deck.id) ? 'Retirer ta Blue Star' : 'Donner une Blue Star'
+}
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -80,13 +87,11 @@ const table = useVueTable({
 
         <div class="min-w-0 flex-1">
           <RouterLink
-            v-if="row.original.user_id === currentUserId"
             :to="{ name: 'deck-builder-edit', params: { deckId: row.original.id } }"
             class="truncate font-medium hover:underline"
           >
             {{ row.original.name }}
           </RouterLink>
-          <span v-else class="truncate font-medium">{{ row.original.name }}</span>
 
           <div class="mt-1.5 flex flex-wrap items-center gap-2">
             <Badge
@@ -97,7 +102,17 @@ const table = useVueTable({
             >
               {{ DECK_FORMAT_LABELS[row.original.format] }}
             </Badge>
-            <span class="text-xs text-muted-foreground">⭐ {{ row.original.star_count }}</span>
+            <button
+              type="button"
+              class="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              :class="starredIds.has(row.original.id) ? 'text-primary' : 'text-muted-foreground hover:text-primary'"
+              :disabled="row.original.user_id === currentUserId"
+              :title="starTitle(row.original)"
+              @click="emit('toggle-star', row.original.id)"
+            >
+              <StarIcon class="size-3.5" :fill="starredIds.has(row.original.id) ? 'currentColor' : 'none'" />
+              {{ row.original.star_count }}
+            </button>
             <span class="text-xs text-muted-foreground">Mis à jour le {{ formatDate(row.original.updated_at) }}</span>
           </div>
         </div>

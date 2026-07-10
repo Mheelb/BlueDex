@@ -12,6 +12,7 @@ export const deckKeys = {
   bookmarkedList: (userId: string, page: number, filters: DeckListQuery) =>
     [...deckKeys.all, 'bookmarked', userId, page, filters] as const,
   bookmarkedIds: (userId: string) => [...deckKeys.all, 'bookmarked-ids', userId] as const,
+  starredIds: (userId: string) => [...deckKeys.all, 'starred-ids', userId] as const,
 }
 
 export interface DeckWithCards {
@@ -41,12 +42,14 @@ export async function saveDeck(
   deckId: string | null,
   name: string,
   format: DeckFormat,
+  isPublic: boolean,
   entries: DeckEntry[],
 ): Promise<string> {
   const { data, error } = await supabase.rpc('save_deck', {
     p_deck_id: deckId,
     p_name: name,
     p_format: format,
+    p_is_public: isPublic,
     p_entries: entries.map((e) => ({ card_id: e.card.id, quantity: e.quantity })),
   })
   if (error || !data) throw new Error(error?.message ?? 'Impossible d\'enregistrer le deck.')
@@ -140,5 +143,21 @@ export async function addBookmark(deckId: string, userId: string): Promise<void>
 
 export async function removeBookmark(deckId: string, userId: string): Promise<void> {
   const { error } = await supabase.from('deck_bookmarks').delete().eq('deck_id', deckId).eq('user_id', userId)
+  if (error) throw new Error(error.message)
+}
+
+export async function fetchStarredDeckIds(userId: string): Promise<Set<string>> {
+  const { data, error } = await supabase.from('deck_stars').select('deck_id').eq('user_id', userId)
+  if (error) throw new Error(error.message)
+  return new Set((data ?? []).map((row) => row.deck_id))
+}
+
+export async function addStar(deckId: string, userId: string): Promise<void> {
+  const { error } = await supabase.from('deck_stars').insert({ deck_id: deckId, user_id: userId })
+  if (error) throw new Error(error.message)
+}
+
+export async function removeStar(deckId: string, userId: string): Promise<void> {
+  const { error } = await supabase.from('deck_stars').delete().eq('deck_id', deckId).eq('user_id', userId)
   if (error) throw new Error(error.message)
 }

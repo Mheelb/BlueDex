@@ -9,12 +9,15 @@ import { createEmptyDeckListQuery } from '@/types/deck'
 import {
   DECK_LIST_PAGE_SIZE,
   addBookmark,
+  addStar,
   deckKeys,
   fetchBookmarkedDeckIds,
   fetchBookmarkedDecks,
   fetchMyDecks,
   fetchPublicDecks,
+  fetchStarredDeckIds,
   removeBookmark,
+  removeStar,
 } from '@/queries/decks'
 import Heading from '@/components/Heading.vue'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -66,6 +69,14 @@ const { data: bookmarkedIds } = useQuery({
 
 const bookmarkedIdSet = computed(() => bookmarkedIds.value ?? new Set<string>())
 
+const { data: starredIds } = useQuery({
+  queryKey: computed(() => deckKeys.starredIds(userId.value ?? '')),
+  queryFn: () => fetchStarredDeckIds(userId.value!),
+  enabled: computed(() => !!userId.value),
+})
+
+const starredIdSet = computed(() => starredIds.value ?? new Set<string>())
+
 const { data: bookmarkedData, isPending: bookmarkedLoading, error: bookmarkedError } = useQuery({
   queryKey: computed(() => deckKeys.bookmarkedList(userId.value ?? '', bookmarkedPage.value, bookmarkedFilters.value)),
   queryFn: () => fetchBookmarkedDecks([...bookmarkedIdSet.value], bookmarkedPage.value, bookmarkedFilters.value),
@@ -95,6 +106,27 @@ const bookmarkMutation = useMutation({
 
 function onToggleBookmark(deckId: string) {
   bookmarkMutation.mutate(deckId)
+}
+
+const starMutation = useMutation({
+  mutationFn: async (deckId: string) => {
+    if (!userId.value) throw new Error('Connecte-toi pour voter pour un deck.')
+    if (starredIdSet.value.has(deckId)) {
+      await removeStar(deckId, userId.value)
+    } else {
+      await addStar(deckId, userId.value)
+    }
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: deckKeys.all })
+  },
+  onError: (err) => {
+    toast.error(err.message)
+  },
+})
+
+function onToggleStar(deckId: string) {
+  starMutation.mutate(deckId)
 }
 </script>
 
@@ -143,10 +175,12 @@ function onToggleBookmark(deckId: string) {
         :page-count="pageCount(publicData?.total)"
         show-author
         :bookmarked-ids="bookmarkedIdSet"
+        :starred-ids="starredIdSet"
         :current-user-id="userId"
         empty-message="Aucun deck public pour le moment."
         @update:page-index="publicPage = $event"
         @toggle-bookmark="onToggleBookmark"
+        @toggle-star="onToggleStar"
       />
     </TabsContent>
 
@@ -165,10 +199,12 @@ function onToggleBookmark(deckId: string) {
           :page-size="DECK_LIST_PAGE_SIZE"
           :page-count="pageCount(myData?.total)"
           :bookmarked-ids="bookmarkedIdSet"
+          :starred-ids="starredIdSet"
           :current-user-id="userId"
           empty-message="Tu n'as pas encore de deck. Crée-en un !"
           @update:page-index="myPage = $event"
           @toggle-bookmark="onToggleBookmark"
+          @toggle-star="onToggleStar"
         />
       </template>
     </TabsContent>
@@ -189,10 +225,12 @@ function onToggleBookmark(deckId: string) {
           :page-count="pageCount(bookmarkedData?.total)"
           show-author
           :bookmarked-ids="bookmarkedIdSet"
+          :starred-ids="starredIdSet"
           :current-user-id="userId"
           empty-message="Aucun deck enregistré. Bookmarke un deck public pour le retrouver ici."
           @update:page-index="bookmarkedPage = $event"
           @toggle-bookmark="onToggleBookmark"
+          @toggle-star="onToggleStar"
         />
       </template>
     </TabsContent>

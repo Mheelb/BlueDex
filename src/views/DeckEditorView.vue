@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { CheckIcon, CircleAlertIcon } from '@lucide/vue'
+import { CheckIcon, CircleAlertIcon, CopyIcon, DownloadIcon } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import type { Card } from '@/types/card'
 import { createEmptyCardFilters } from '@/types/card'
@@ -10,7 +10,9 @@ import type { DeckEntry, DeckFormat } from '@/types/deck'
 import { DECK_FORMATS, DECK_FORMAT_LABELS, DECK_FORMAT_RULES } from '@/types/deck'
 import { filterAndSortCards } from '@/lib/filterCards'
 import { canAddCard, getDeckIssues, isDeckLegal } from '@/lib/deckValidation'
+import { deckExportFilename, formatDeckExport } from '@/lib/deckExport'
 import { useAuthUser } from '@/composables/useAuthUser'
+import { useDeckDraft } from '@/composables/useDeckDraft'
 import { cardKeys, fetchAllCardsWithSet } from '@/queries/cards'
 import { deckKeys, fetchDeckWithCards, saveDeck } from '@/queries/decks'
 import CardFilters from '@/components/CardFilters.vue'
@@ -19,6 +21,7 @@ import type { SelectFieldOption } from '@/components/SelectField.vue'
 import DeckBuilderCardTile from '@/components/deckbuilder/DeckBuilderCardTile.vue'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import PageHeader from '@/components/PageHeader.vue'
 import QueryState from '@/components/QueryState.vue'
 
@@ -30,9 +33,13 @@ const { session } = useAuthUser()
 
 const isEditing = computed(() => !!props.deckId)
 
-const deckName = ref('Nouveau deck')
-const format = ref<DeckFormat>('normal')
-const entries = ref<DeckEntry[]>([])
+const { setDraft, takeDraft } = useDeckDraft()
+const draft = !props.deckId ? takeDraft() : null
+
+const deckName = ref(draft?.name ?? 'Nouveau deck')
+const format = ref<DeckFormat>(draft?.format ?? 'normal')
+const isPublic = ref(false)
+const entries = ref<DeckEntry[]>(draft?.entries.map((e) => ({ ...e })) ?? [])
 const error = ref<string | null>(null)
 
 const formatOptions: SelectFieldOption[] = DECK_FORMATS.map((f) => ({ value: f, label: DECK_FORMAT_LABELS[f] }))
@@ -49,10 +56,18 @@ watch(
     if (!data) return
     deckName.value = data.deck.name
     format.value = data.deck.format
+    isPublic.value = data.deck.is_public
     entries.value = data.entries.map((e) => ({ ...e }))
   },
   { immediate: true },
 )
+
+// Un deck public reste consultable par n'importe quel compte connecté, mais
+// seul son propriétaire peut le modifier : tant que le deck n'est pas encore
+// chargé on ne sait pas qui en est l'auteur, donc readOnly reste false pour
+// ne pas afficher un formulaire éditable en clignotant avant de le verrouiller.
+const isOwner = computed(() => !isEditing.value || existingDeck.value?.deck.user_id === session.value?.user.id)
+const readOnly = computed(() => isEditing.value && !!existingDeck.value && !isOwner.value)
 
 const { data: allCards, isPending: catalogueLoading } = useQuery({
   queryKey: cardKeys.allWithSet(),
@@ -75,7 +90,7 @@ function isCardDisabled(card: Card) {
 }
 
 function addCard(card: Card) {
-  if (!canAddCard(entries.value, card, format.value)) return
+  if (readOnly.value || !canAddCard(entries.value, card, format.value)) return
   const existing = findEntry(card.id)
   if (existing) {
     existing.quantity++
@@ -85,6 +100,7 @@ function addCard(card: Card) {
 }
 
 function removeCard(cardId: string) {
+  if (readOnly.value) return
   const existing = findEntry(cardId)
   if (!existing) return
   if (existing.quantity <= 1) {
@@ -95,6 +111,7 @@ function removeCard(cardId: string) {
 }
 
 function onDrop(event: DragEvent) {
+  if (readOnly.value) return
   const cardId = event.dataTransfer?.getData('text/plain')
   if (!cardId) return
   const card = allCards.value?.find((c) => c.id === cardId)
@@ -133,7 +150,7 @@ const saveMutation = useMutation({
     if (!name) throw new Error('Le nom du deck est requis.')
     if (!isDeckLegal(entries.value, format.value)) throw new Error('Le deck ne respecte pas les règles du format choisi.')
 
-    return saveDeck(props.deckId ?? null, name, format.value, entries.value)
+    return saveDeck(props.deckId ?? null, name, format.value, isPublic.value, entries.value)
   },
   onSuccess: (deckId) => {
     queryClient.invalidateQueries({ queryKey: deckKeys.detail(deckId) })
@@ -152,12 +169,36 @@ function onSave() {
   error.value = null
   saveMutation.mutate()
 }
+
+function onDuplicate() {
+  setDraft({
+    name: `Copie de ${deckName.value}`,
+    format: format.value,
+    entries: entries.value.map((e) => ({ ...e })),
+  })
+  router.push({ name: 'deck-builder-new' })
+}
+
+function onExport() {
+  const text = formatDeckExport(deckName.value, format.value, entries.value)
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = deckExportFilename(deckName.value)
+  link.click()
+  URL.revokeObjectURL(url)
+}
 </script>
 
 <template>
-  <PageHeader :title="isEditing ? 'Modifier le deck' : 'Nouveau deck'" />
+  <PageHeader :title="readOnly ? deckName : isEditing ? 'Modifier le deck' : 'Nouveau deck'" />
 
   <QueryState :loading="isEditing && deckLoading" :error="deckError?.message ?? null">
+    <p v-if="readOnly" class="mb-4 text-sm text-muted-foreground">
+      Deck public en lecture seule — seul son propriétaire peut le modifier. Duplique-le pour en créer ta propre version.
+    </p>
+
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
       <div>
         <CardFilters v-model="filters" class="mb-4" />
@@ -171,8 +212,8 @@ function onSave() {
               <DeckBuilderCardTile
                 :card="card"
                 :quantity="quantityInDeck(card.id)"
-                :disabled="isCardDisabled(card)"
-                draggable
+                :disabled="readOnly || isCardDisabled(card)"
+                :draggable="!readOnly"
                 @click="addCard(card)"
               />
               <p class="mt-1 truncate text-center text-[10px] text-muted-foreground">{{ card.set.name }}</p>
@@ -182,8 +223,17 @@ function onSave() {
       </div>
 
       <div class="flex h-fit flex-col gap-4 rounded-xl border bg-card p-4" @dragover.prevent @drop="onDrop">
-        <Input v-model="deckName" placeholder="Nom du deck" />
-        <SelectField v-model="format" :options="formatOptions" />
+        <Input v-model="deckName" placeholder="Nom du deck" :disabled="readOnly" />
+        <SelectField v-model="format" :options="formatOptions" :disabled="readOnly" />
+        <label class="flex items-center gap-2 text-sm">
+          <Checkbox
+            :model-value="isPublic"
+            :disabled="readOnly"
+            @update:model-value="(v) => (isPublic = !!v)"
+          />
+          public
+          <span class="text-xs text-muted-foreground">— visible et duplicable par les autres joueurs</span>
+        </label>
         <p class="text-sm text-muted-foreground">{{ totalCards }} / {{ targetSize }} cartes</p>
 
         <div
@@ -232,10 +282,23 @@ function onSave() {
           </div>
         </div>
 
-        <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
-        <Button :disabled="saveMutation.isPending.value || !canSave" @click="onSave">
-          {{ saveMutation.isPending.value ? 'Enregistrement...' : 'Enregistrer' }}
+        <Button v-if="entries.length > 0" variant="outline" @click="onExport">
+          <DownloadIcon />
+          Exporter
         </Button>
+
+        <template v-if="readOnly">
+          <Button variant="outline" @click="onDuplicate">
+            <CopyIcon />
+            Dupliquer
+          </Button>
+        </template>
+        <template v-else>
+          <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+          <Button :disabled="saveMutation.isPending.value || !canSave" @click="onSave">
+            {{ saveMutation.isPending.value ? 'Enregistrement...' : 'Enregistrer' }}
+          </Button>
+        </template>
       </div>
     </div>
   </QueryState>

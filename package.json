@@ -13,6 +13,7 @@
     "@fontsource/inter": "^5.2.8",
     "@lucide/vue": "^1.24.0",
     "@supabase/supabase-js": "^2.110.2",
+    "@tanstack/pacer": "^0.21.1",
     "@tanstack/vue-form": "^1.33.1",
     "@tanstack/vue-query": "^5.101.2",
     "@vueuse/core": "^14.3.0",

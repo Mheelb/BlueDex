@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { reactive, ref } from 'vue'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { ListIcon, PencilIcon, PlusIcon, Trash2Icon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
 import type { CardSet } from '@/types/card'
+import { fetchSets, setKeys } from '@/queries/sets'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -12,13 +13,16 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/com
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 import FormField from '@/components/FormField.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import QueryState from '@/components/QueryState.vue'
 
-const router = useRouter()
+const queryClient = useQueryClient()
 
-const sets = ref<CardSet[]>([])
-const loading = ref(true)
+const { data: sets, isPending: loading } = useQuery({
+  queryKey: setKeys.list('created_at'),
+  queryFn: () => fetchSets('created_at'),
+})
+
 const error = ref<string | null>(null)
-const saving = ref(false)
 const sheetOpen = ref(false)
 const fieldErrors = ref<Record<string, string>>({})
 const editingId = ref<string | null>(null)
@@ -34,19 +38,6 @@ function emptyForm() {
 }
 
 const form = reactive(emptyForm())
-
-async function load() {
-  loading.value = true
-  const { data, error: fetchError } = await supabase.from('sets').select('*').order('created_at', { ascending: false })
-  if (fetchError) {
-    error.value = fetchError.message
-  } else {
-    sets.value = data as CardSet[]
-  }
-  loading.value = false
-}
-
-onMounted(load)
 
 function resetForm() {
   editingId.value = null
@@ -87,45 +78,54 @@ function validate(): boolean {
   return Object.keys(errors).length === 0
 }
 
-async function onSubmit() {
-  if (!validate()) return
+const saveMutation = useMutation({
+  mutationFn: async () => {
+    const payload = {
+      name: form.name,
+      slug: form.slug,
+      release_date: form.release_date || null,
+      logo_url: form.logo_url || null,
+      symbol_url: form.symbol_url || null,
+    }
 
-  saving.value = true
+    const { error: saveError } = editingId.value
+      ? await supabase.from('sets').update(payload).eq('id', editingId.value)
+      : await supabase.from('sets').insert({ ...payload, card_count: 0 })
+
+    if (saveError) throw new Error(saveError.message)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: setKeys.all })
+    sheetOpen.value = false
+    resetForm()
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
+
+function onSubmit() {
   error.value = null
-
-  const payload = {
-    name: form.name,
-    slug: form.slug,
-    release_date: form.release_date || null,
-    logo_url: form.logo_url || null,
-    symbol_url: form.symbol_url || null,
-  }
-
-  const { error: saveError } = editingId.value
-    ? await supabase.from('sets').update(payload).eq('id', editingId.value)
-    : await supabase.from('sets').insert({ ...payload, card_count: 0 })
-
-  saving.value = false
-
-  if (saveError) {
-    error.value = saveError.message
-    return
-  }
-
-  sheetOpen.value = false
-  resetForm()
-  await load()
+  if (!validate()) return
+  saveMutation.mutate()
 }
 
-async function onDelete(set: CardSet) {
-  const { error: deleteError } = await supabase.from('sets').delete().eq('id', set.id)
-  if (deleteError) {
-    error.value = deleteError.message
-    return
-  }
-  await load()
-}
+const deleteMutation = useMutation({
+  mutationFn: async (set: CardSet) => {
+    const { error: deleteError } = await supabase.from('sets').delete().eq('id', set.id)
+    if (deleteError) throw new Error(deleteError.message)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: setKeys.all })
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
 
+function onDelete(set: CardSet) {
+  deleteMutation.mutate(set)
+}
 </script>
 
 <template>
@@ -136,40 +136,39 @@ async function onDelete(set: CardSet) {
     </Button>
   </PageHeader>
 
-  <p v-if="loading" class="text-muted-foreground">Chargement...</p>
-  <p v-else-if="sets.length === 0" class="text-muted-foreground">Aucun set pour le moment.</p>
-
-  <div v-else class="flex flex-col gap-3">
-    <Card v-for="set in sets" :key="set.id">
-      <CardContent class="flex items-center justify-between">
-        <div>
-          <p class="font-medium">{{ set.name }}</p>
-          <p class="mt-0.5 text-xs text-muted-foreground">
-            {{ set.slug }} · <Badge variant="secondary">{{ set.card_count }} cartes</Badge>
-          </p>
-        </div>
-        <div class="flex items-center gap-1">
-          <Button as-child variant="ghost" size="icon">
-            <RouterLink :to="{ name: 'admin-set-cards', params: { setSlug: set.slug } }" title="Gérer les cartes">
-              <ListIcon />
-            </RouterLink>
-          </Button>
-          <Button variant="ghost" size="icon" title="Modifier le set" @click="openEditSheet(set)">
-            <PencilIcon />
-          </Button>
-          <ConfirmDeleteDialog
-            :title="`Supprimer le set « ${set.name} » ?`"
-            description="Toutes ses cartes seront définitivement supprimées."
-            @confirm="onDelete(set)"
-          >
-            <Button variant="ghost" size="icon" class="text-destructive">
-              <Trash2Icon />
+  <QueryState :loading="loading" :empty="sets?.length === 0" empty-message="Aucun set pour le moment.">
+    <div class="flex flex-col gap-3">
+      <Card v-for="set in sets ?? []" :key="set.id">
+        <CardContent class="flex items-center justify-between">
+          <div>
+            <p class="font-medium">{{ set.name }}</p>
+            <p class="mt-0.5 text-xs text-muted-foreground">
+              {{ set.slug }} · <Badge variant="secondary">{{ set.card_count }} cartes</Badge>
+            </p>
+          </div>
+          <div class="flex items-center gap-1">
+            <Button as-child variant="ghost" size="icon">
+              <RouterLink :to="{ name: 'admin-set-cards', params: { setSlug: set.slug } }" title="Gérer les cartes">
+                <ListIcon />
+              </RouterLink>
             </Button>
-          </ConfirmDeleteDialog>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
+            <Button variant="ghost" size="icon" title="Modifier le set" @click="openEditSheet(set)">
+              <PencilIcon />
+            </Button>
+            <ConfirmDeleteDialog
+              :title="`Supprimer le set « ${set.name} » ?`"
+              description="Toutes ses cartes seront définitivement supprimées."
+              @confirm="onDelete(set)"
+            >
+              <Button variant="ghost" size="icon" class="text-destructive">
+                <Trash2Icon />
+              </Button>
+            </ConfirmDeleteDialog>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  </QueryState>
 
   <Sheet v-model:open="sheetOpen">
     <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
@@ -199,8 +198,8 @@ async function onDelete(set: CardSet) {
         <SheetFooter class="border-t">
           <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
           <div class="flex gap-3">
-            <Button type="submit" :disabled="saving">
-              {{ saving ? 'Enregistrement...' : editingId ? 'Mettre à jour le set' : 'Créer le set' }}
+            <Button type="submit" :disabled="saveMutation.isPending.value">
+              {{ saveMutation.isPending.value ? 'Enregistrement...' : editingId ? 'Mettre à jour le set' : 'Créer le set' }}
             </Button>
             <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
           </div>

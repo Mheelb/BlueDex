@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import AppFooter from '@/components/AppFooter.vue'
 import PageContainer from '@/components/PageContainer.vue'
+
+const VueQueryDevtools = import.meta.env.DEV
+  ? defineAsyncComponent(() => import('@tanstack/vue-query-devtools').then((m) => m.VueQueryDevtools))
+  : null
 </script>
 
 <template>
@@ -14,6 +19,7 @@ import PageContainer from '@/components/PageContainer.vue'
       </PageContainer>
     </main>
     <AppFooter />
+    <component :is="VueQueryDevtools" v-if="VueQueryDevtools" />
   </div>
 </template>
 

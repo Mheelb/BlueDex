@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useMutation } from '@tanstack/vue-query'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -12,27 +13,23 @@ const router = useRouter()
 
 const email = ref('')
 const password = ref('')
-const loading = ref(false)
-const error = ref<string | null>(null)
 
-async function onSubmit() {
-  loading.value = true
-  error.value = null
+const signInMutation = useMutation({
+  mutationFn: async () => {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.value,
+      password: password.value,
+    })
+    if (signInError) throw new Error(signInError.message)
+  },
+  onSuccess: () => {
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : undefined
+    router.push(redirect ?? { name: 'admin-sets' })
+  },
+})
 
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: email.value,
-    password: password.value,
-  })
-
-  loading.value = false
-
-  if (signInError) {
-    error.value = signInError.message
-    return
-  }
-
-  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : undefined
-  router.push(redirect ?? { name: 'admin-sets' })
+function onSubmit() {
+  signInMutation.mutate()
 }
 </script>
 
@@ -53,10 +50,10 @@ async function onSubmit() {
           <Input id="password" v-model="password" type="password" required autocomplete="current-password" />
         </div>
 
-        <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+        <p v-if="signInMutation.error.value" class="text-sm text-destructive">{{ signInMutation.error.value.message }}</p>
 
-        <Button type="submit" :disabled="loading">
-          {{ loading ? 'Connexion...' : 'Se connecter' }}
+        <Button type="submit" :disabled="signInMutation.isPending.value">
+          {{ signInMutation.isPending.value ? 'Connexion...' : 'Se connecter' }}
         </Button>
       </form>
     </CardContent>

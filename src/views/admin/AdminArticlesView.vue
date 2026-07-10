@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { PencilIcon, SparklesIcon, Trash2Icon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
 import type { Article } from '@/types/article'
+import { articleKeys, fetchAdminArticles } from '@/queries/articles'
 import BackButton from '@/components/BackButton.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -13,12 +15,16 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/com
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 import FormField from '@/components/FormField.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import QueryState from '@/components/QueryState.vue'
 
-const articles = ref<Article[]>([])
-const loading = ref(true)
+const queryClient = useQueryClient()
+
+const { data: articles, isPending: loading } = useQuery({
+  queryKey: articleKeys.admin(),
+  queryFn: fetchAdminArticles,
+})
+
 const error = ref<string | null>(null)
-const generating = ref(false)
-const saving = ref(false)
 const sheetOpen = ref(false)
 const editingId = ref<string | null>(null)
 const fieldErrors = ref<Record<string, string>>({})
@@ -35,37 +41,22 @@ function emptyForm() {
 
 const form = reactive(emptyForm())
 
-async function load() {
-  loading.value = true
-  const { data, error: fetchError } = await supabase
-    .from('articles')
-    .select('*')
-    .order('created_at', { ascending: false })
+const generateMutation = useMutation({
+  mutationFn: async () => {
+    const { error: invokeError } = await supabase.functions.invoke('generate-article')
+    if (invokeError) throw new Error(invokeError.message)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: articleKeys.all })
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
 
-  if (fetchError) {
-    error.value = fetchError.message
-  } else {
-    articles.value = data as Article[]
-  }
-  loading.value = false
-}
-
-onMounted(load)
-
-async function onGenerate() {
-  generating.value = true
+function onGenerate() {
   error.value = null
-
-  const { error: invokeError } = await supabase.functions.invoke('generate-article')
-
-  generating.value = false
-
-  if (invokeError) {
-    error.value = invokeError.message
-    return
-  }
-
-  await load()
+  generateMutation.mutate()
 }
 
 function resetForm() {
@@ -96,60 +87,78 @@ function validate(): boolean {
   return Object.keys(errors).length === 0
 }
 
-async function onSave() {
+const saveMutation = useMutation({
+  mutationFn: async () => {
+    const { error: saveError } = await supabase
+      .from('articles')
+      .update({
+        title: form.title,
+        slug: form.slug,
+        excerpt: form.excerpt,
+        content: form.content,
+        cover_image_url: form.cover_image_url || null,
+      })
+      .eq('id', editingId.value)
+
+    if (saveError) throw new Error(saveError.message)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: articleKeys.all })
+    sheetOpen.value = false
+    resetForm()
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
+
+function onSave() {
   if (!editingId.value) return
-  if (!validate()) return
-
-  saving.value = true
   error.value = null
-
-  const { error: saveError } = await supabase
-    .from('articles')
-    .update({
-      title: form.title,
-      slug: form.slug,
-      excerpt: form.excerpt,
-      content: form.content,
-      cover_image_url: form.cover_image_url || null,
-    })
-    .eq('id', editingId.value)
-
-  saving.value = false
-
-  if (saveError) {
-    error.value = saveError.message
-    return
-  }
-
-  sheetOpen.value = false
-  resetForm()
-  await load()
+  if (!validate()) return
+  saveMutation.mutate()
 }
 
-async function onTogglePublish(article: Article) {
-  const nextStatus = article.status === 'published' ? 'draft' : 'published'
-  const { error: updateError } = await supabase
-    .from('articles')
-    .update({
-      status: nextStatus,
-      published_at: nextStatus === 'published' ? new Date().toISOString() : null,
-    })
-    .eq('id', article.id)
+const togglePublishMutation = useMutation({
+  mutationFn: async (article: Article) => {
+    const nextStatus = article.status === 'published' ? 'draft' : 'published'
+    const { error: updateError } = await supabase
+      .from('articles')
+      .update({
+        status: nextStatus,
+        published_at: nextStatus === 'published' ? new Date().toISOString() : null,
+      })
+      .eq('id', article.id)
 
-  if (updateError) {
-    error.value = updateError.message
-    return
-  }
-  await load()
+    if (updateError) throw new Error(updateError.message)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: articleKeys.all })
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
+
+function onTogglePublish(article: Article) {
+  togglePublishMutation.mutate(article)
 }
 
-async function onDelete(article: Article) {
-  const { error: deleteError } = await supabase.from('articles').delete().eq('id', article.id)
-  if (deleteError) {
-    error.value = deleteError.message
-    return
-  }
-  await load()
+const deleteMutation = useMutation({
+  mutationFn: async (article: Article) => {
+    const { error: deleteError } = await supabase.from('articles').delete().eq('id', article.id)
+    if (deleteError) throw new Error(deleteError.message)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: articleKeys.all })
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
+
+function onDelete(article: Article) {
+  deleteMutation.mutate(article)
 }
 </script>
 
@@ -157,48 +166,48 @@ async function onDelete(article: Article) {
   <BackButton :to="{ name: 'admin-sets' }" label="Retour aux sets" class="mb-4" />
 
   <PageHeader title="Admin · Articles">
-    <Button :disabled="generating" @click="onGenerate">
+    <Button :disabled="generateMutation.isPending.value" @click="onGenerate">
       <SparklesIcon />
-      {{ generating ? 'Génération...' : 'Générer un nouvel article' }}
+      {{ generateMutation.isPending.value ? 'Génération...' : 'Générer un nouvel article' }}
     </Button>
   </PageHeader>
 
   <p v-if="error" class="mb-4 text-sm text-destructive">{{ error }}</p>
-  <p v-if="loading" class="text-muted-foreground">Chargement...</p>
-  <p v-else-if="articles.length === 0" class="text-muted-foreground">Aucun article pour le moment.</p>
 
-  <div v-else class="flex flex-col gap-3">
-    <Card v-for="article in articles" :key="article.id">
-      <CardContent class="flex items-center justify-between gap-4">
-        <div class="min-w-0">
-          <div class="flex items-center gap-2">
-            <p class="truncate font-medium">{{ article.title }}</p>
-            <Badge :variant="article.status === 'published' ? 'default' : 'secondary'">
-              {{ article.status === 'published' ? 'Publié' : 'Brouillon' }}
-            </Badge>
+  <QueryState :loading="loading" :empty="articles?.length === 0" empty-message="Aucun article pour le moment.">
+    <div class="flex flex-col gap-3">
+      <Card v-for="article in articles ?? []" :key="article.id">
+        <CardContent class="flex items-center justify-between gap-4">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <p class="truncate font-medium">{{ article.title }}</p>
+              <Badge :variant="article.status === 'published' ? 'default' : 'secondary'">
+                {{ article.status === 'published' ? 'Publié' : 'Brouillon' }}
+              </Badge>
+            </div>
+            <p class="mt-0.5 truncate text-xs text-muted-foreground">{{ article.excerpt }}</p>
           </div>
-          <p class="mt-0.5 truncate text-xs text-muted-foreground">{{ article.excerpt }}</p>
-        </div>
-        <div class="flex shrink-0 items-center gap-1">
-          <Button variant="outline" size="sm" @click="onTogglePublish(article)">
-            {{ article.status === 'published' ? 'Dépublier' : 'Publier' }}
-          </Button>
-          <Button variant="ghost" size="icon" @click="openEditSheet(article)">
-            <PencilIcon />
-          </Button>
-          <ConfirmDeleteDialog
-            :title="`Supprimer l'article « ${article.title} » ?`"
-            description="Cette action est définitive."
-            @confirm="onDelete(article)"
-          >
-            <Button variant="ghost" size="icon" class="text-destructive">
-              <Trash2Icon />
+          <div class="flex shrink-0 items-center gap-1">
+            <Button variant="outline" size="sm" @click="onTogglePublish(article)">
+              {{ article.status === 'published' ? 'Dépublier' : 'Publier' }}
             </Button>
-          </ConfirmDeleteDialog>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
+            <Button variant="ghost" size="icon" @click="openEditSheet(article)">
+              <PencilIcon />
+            </Button>
+            <ConfirmDeleteDialog
+              :title="`Supprimer l'article « ${article.title} » ?`"
+              description="Cette action est définitive."
+              @confirm="onDelete(article)"
+            >
+              <Button variant="ghost" size="icon" class="text-destructive">
+                <Trash2Icon />
+              </Button>
+            </ConfirmDeleteDialog>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  </QueryState>
 
   <Sheet v-model:open="sheetOpen">
     <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
@@ -228,8 +237,8 @@ async function onDelete(article: Article) {
         <SheetFooter class="border-t">
           <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
           <div class="flex gap-3">
-            <Button type="submit" :disabled="saving">
-              {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+            <Button type="submit" :disabled="saveMutation.isPending.value">
+              {{ saveMutation.isPending.value ? 'Enregistrement...' : 'Enregistrer' }}
             </Button>
             <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
           </div>

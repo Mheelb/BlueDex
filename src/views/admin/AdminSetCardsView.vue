@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { CopyIcon, PencilIcon, PlusIcon, Trash2Icon, UploadIcon } from '@lucide/vue'
 import { supabase } from '@/lib/supabase'
 import type { Card, CardType, Faction, Rarity, Subtype } from '@/types/card'
 import { CARD_TYPES, FACTIONS, RARITIES, SUBTYPES, createEmptyCardFilters } from '@/types/card'
 import { filterAndSortCards } from '@/lib/filterCards'
 import { useSetBySlug } from '@/composables/useSetBySlug'
+import { cardKeys, fetchCardsBySet } from '@/queries/cards'
+import { setKeys } from '@/queries/sets'
 import SelectField from '@/components/SelectField.vue'
 import type { SelectFieldOption } from '@/components/SelectField.vue'
 import BackButton from '@/components/BackButton.vue'
@@ -19,14 +22,25 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/com
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 import FormField from '@/components/FormField.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import QueryState from '@/components/QueryState.vue'
 
 const props = defineProps<{ setSlug: string }>()
 
-const { set, error: setError, loadSet } = useSetBySlug()
-const cards = ref<Card[]>([])
-const loading = ref(true)
+const queryClient = useQueryClient()
+
+const { data: set, isPending: setLoading, error: setError } = useSetBySlug(() => props.setSlug)
+
+const setId = computed(() => set.value?.id)
+const { data: cards, isPending: cardsLoading, error: cardsError } = useQuery({
+  queryKey: computed(() => cardKeys.bySet(setId.value ?? '')),
+  queryFn: () => fetchCardsBySet(setId.value!, true),
+  enabled: computed(() => !!setId.value),
+})
+
+const loading = computed(() => setLoading.value || (!!setId.value && cardsLoading.value))
+const loadError = computed(() => setError.value?.message ?? cardsError.value?.message ?? null)
+
 const error = ref<string | null>(null)
-const saving = ref(false)
 const imageFile = ref<File | null>(null)
 const editingId = ref<string | null>(null)
 const editingImageUrl = ref<string | null>(null)
@@ -46,6 +60,12 @@ async function deleteCardImage(imageUrl: string | null) {
   const path = storagePathFromUrl(imageUrl)
   if (!path) return
   await supabase.storage.from('card-images').remove([path])
+}
+
+async function syncCardCount(count: number) {
+  if (!setId.value) return
+  await supabase.from('sets').update({ card_count: count }).eq('id', setId.value)
+  queryClient.invalidateQueries({ queryKey: setKeys.all })
 }
 
 const rarityOptions: SelectFieldOption[] = RARITIES.map((r) => ({ value: r, label: r }))
@@ -78,34 +98,7 @@ function emptyForm() {
 const form = reactive(emptyForm())
 
 const filters = ref(createEmptyCardFilters())
-const filteredCards = computed(() => filterAndSortCards(cards.value, filters.value))
-
-async function load() {
-  loading.value = true
-  error.value = null
-
-  const ok = await loadSet(props.setSlug)
-  if (!ok || !set.value) {
-    error.value = setError.value
-    loading.value = false
-    return
-  }
-
-  const { data: cardsData, error: cardsError } = await supabase
-    .from('cards')
-    .select('*')
-    .eq('set_id', set.value.id)
-    .order('number', { ascending: true })
-
-  if (cardsError) {
-    error.value = cardsError.message
-  } else {
-    cards.value = cardsData as Card[]
-  }
-  loading.value = false
-}
-
-onMounted(load)
+const filteredCards = computed(() => filterAndSortCards(cards.value ?? [], filters.value))
 
 const fileInputEl = ref<HTMLInputElement | null>(null)
 
@@ -115,11 +108,6 @@ function onFileChange(event: Event) {
 
 function triggerFileInput() {
   fileInputEl.value?.click()
-}
-
-async function syncCardCount() {
-  if (!set.value) return
-  await supabase.from('sets').update({ card_count: cards.value.length }).eq('id', set.value.id)
 }
 
 function resetForm() {
@@ -208,78 +196,91 @@ function validate(): boolean {
   return Object.keys(errors).length === 0
 }
 
-async function onSubmit() {
+const saveMutation = useMutation({
+  mutationFn: async () => {
+    if (!set.value) throw new Error('Set introuvable.')
+
+    let image_url: string | undefined
+
+    if (imageFile.value) {
+      const path = `${set.value.slug}/${form.number}-${Date.now()}-${imageFile.value.name}`
+      const { error: uploadError } = await supabase.storage.from('card-images').upload(path, imageFile.value)
+      if (uploadError) throw new Error(uploadError.message)
+      image_url = supabase.storage.from('card-images').getPublicUrl(path).data.publicUrl
+    }
+
+    const payload = {
+      set_id: set.value.id,
+      number: form.number,
+      name: form.name,
+      rarity: form.rarity,
+      is_holo: form.is_holo,
+      is_signed: form.is_signed,
+      is_numbered: form.is_numbered,
+      numbered_total: form.is_numbered ? Number(form.numbered_total) : null,
+      is_full_art: form.is_full_art,
+      is_overframe: form.is_overframe,
+      type: form.type || null,
+      subtype: form.subtype || null,
+      faction: form.faction || null,
+      cost: form.cost === '' ? null : Number(form.cost),
+      power: form.power === '' ? null : Number(form.power),
+      support: form.support === '' ? null : Number(form.support),
+      effect: form.effect || null,
+      artist: form.artist || null,
+      ...(image_url ? { image_url } : {}),
+    }
+
+    const isCreate = !editingId.value
+    const { error: saveError } = editingId.value
+      ? await supabase.from('cards').update(payload).eq('id', editingId.value)
+      : await supabase.from('cards').insert(payload)
+
+    if (saveError) throw new Error(saveError.message)
+
+    if (image_url && editingImageUrl.value) {
+      await deleteCardImage(editingImageUrl.value)
+    }
+
+    return { isCreate }
+  },
+  onSuccess: async ({ isCreate }) => {
+    queryClient.invalidateQueries({ queryKey: cardKeys.bySet(setId.value ?? '') })
+    if (isCreate) {
+      await syncCardCount((cards.value?.length ?? 0) + 1)
+    }
+    sheetOpen.value = false
+    resetForm()
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
+
+function onSubmit() {
+  error.value = null
   if (!set.value) return
   if (!validate()) return
-
-  saving.value = true
-  error.value = null
-
-  let image_url: string | undefined
-
-  if (imageFile.value) {
-    const path = `${set.value.slug}/${form.number}-${Date.now()}-${imageFile.value.name}`
-    const { error: uploadError } = await supabase.storage.from('card-images').upload(path, imageFile.value)
-    if (uploadError) {
-      error.value = uploadError.message
-      saving.value = false
-      return
-    }
-    image_url = supabase.storage.from('card-images').getPublicUrl(path).data.publicUrl
-  }
-
-  const payload = {
-    set_id: set.value.id,
-    number: form.number,
-    name: form.name,
-    rarity: form.rarity,
-    is_holo: form.is_holo,
-    is_signed: form.is_signed,
-    is_numbered: form.is_numbered,
-    numbered_total: form.is_numbered ? Number(form.numbered_total) : null,
-    is_full_art: form.is_full_art,
-    is_overframe: form.is_overframe,
-    type: form.type || null,
-    subtype: form.subtype || null,
-    faction: form.faction || null,
-    cost: form.cost === '' ? null : Number(form.cost),
-    power: form.power === '' ? null : Number(form.power),
-    support: form.support === '' ? null : Number(form.support),
-    effect: form.effect || null,
-    artist: form.artist || null,
-    ...(image_url ? { image_url } : {}),
-  }
-
-  const { error: saveError } = editingId.value
-    ? await supabase.from('cards').update(payload).eq('id', editingId.value)
-    : await supabase.from('cards').insert(payload)
-
-  saving.value = false
-
-  if (saveError) {
-    error.value = saveError.message
-    return
-  }
-
-  if (image_url && editingImageUrl.value) {
-    await deleteCardImage(editingImageUrl.value)
-  }
-
-  sheetOpen.value = false
-  resetForm()
-  await load()
-  await syncCardCount()
+  saveMutation.mutate()
 }
 
-async function onDelete(card: Card) {
-  const { error: deleteError } = await supabase.from('cards').delete().eq('id', card.id)
-  if (deleteError) {
-    error.value = deleteError.message
-    return
-  }
-  await deleteCardImage(card.image_url)
-  await load()
-  await syncCardCount()
+const deleteMutation = useMutation({
+  mutationFn: async (card: Card) => {
+    const { error: deleteError } = await supabase.from('cards').delete().eq('id', card.id)
+    if (deleteError) throw new Error(deleteError.message)
+    await deleteCardImage(card.image_url)
+  },
+  onSuccess: async () => {
+    queryClient.invalidateQueries({ queryKey: cardKeys.bySet(setId.value ?? '') })
+    await syncCardCount((cards.value?.length ?? 0) - 1)
+  },
+  onError: (err) => {
+    error.value = err.message
+  },
+})
+
+function onDelete(card: Card) {
+  deleteMutation.mutate(card)
 }
 </script>
 
@@ -293,50 +294,48 @@ async function onDelete(card: Card) {
     </Button>
   </PageHeader>
 
-  <p v-if="loading" class="text-muted-foreground">Chargement...</p>
-
-  <template v-else>
+  <QueryState :loading="loading" :error="loadError">
     <CardFilters v-model="filters" class="mb-4" />
 
-    <p v-if="filteredCards.length === 0" class="text-muted-foreground">Aucune carte ne correspond aux filtres.</p>
-
-    <div v-else class="flex flex-col gap-2">
-      <UiCard v-for="card in filteredCards" :key="card.id">
-        <CardContent class="flex items-center gap-4">
-          <img
-            v-if="card.image_url"
-            :src="card.image_url"
-            :alt="card.name"
-            class="h-16 w-12 rounded object-cover"
-          />
-          <div v-else class="flex h-16 w-12 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
-            N/A
-          </div>
-          <div class="flex-1">
-            <p class="font-medium">{{ card.name }} <span class="text-muted-foreground">#{{ card.number }}</span></p>
-            <p class="text-xs text-muted-foreground">{{ card.rarity }}<span v-if="card.is_holo"> · Holo</span></p>
-          </div>
-          <div class="flex items-center gap-1">
-            <Button variant="ghost" size="icon" @click="openEditSheet(card)">
-              <PencilIcon />
-            </Button>
-            <Button variant="ghost" size="icon" title="Dupliquer" @click="openDuplicateSheet(card)">
-              <CopyIcon />
-            </Button>
-            <ConfirmDeleteDialog
-              :title="`Supprimer la carte « ${card.name} » ?`"
-              description="Cette action est définitive."
-              @confirm="onDelete(card)"
-            >
-              <Button variant="ghost" size="icon" class="text-destructive">
-                <Trash2Icon />
+    <QueryState :empty="filteredCards.length === 0" empty-message="Aucune carte ne correspond aux filtres.">
+      <div class="flex flex-col gap-2">
+        <UiCard v-for="card in filteredCards" :key="card.id">
+          <CardContent class="flex items-center gap-4">
+            <img
+              v-if="card.image_url"
+              :src="card.image_url"
+              :alt="card.name"
+              class="h-16 w-12 rounded object-cover"
+            />
+            <div v-else class="flex h-16 w-12 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
+              N/A
+            </div>
+            <div class="flex-1">
+              <p class="font-medium">{{ card.name }} <span class="text-muted-foreground">#{{ card.number }}</span></p>
+              <p class="text-xs text-muted-foreground">{{ card.rarity }}<span v-if="card.is_holo"> · Holo</span></p>
+            </div>
+            <div class="flex items-center gap-1">
+              <Button variant="ghost" size="icon" @click="openEditSheet(card)">
+                <PencilIcon />
               </Button>
-            </ConfirmDeleteDialog>
-          </div>
-        </CardContent>
-      </UiCard>
-    </div>
-  </template>
+              <Button variant="ghost" size="icon" title="Dupliquer" @click="openDuplicateSheet(card)">
+                <CopyIcon />
+              </Button>
+              <ConfirmDeleteDialog
+                :title="`Supprimer la carte « ${card.name} » ?`"
+                description="Cette action est définitive."
+                @confirm="onDelete(card)"
+              >
+                <Button variant="ghost" size="icon" class="text-destructive">
+                  <Trash2Icon />
+                </Button>
+              </ConfirmDeleteDialog>
+            </div>
+          </CardContent>
+        </UiCard>
+      </div>
+    </QueryState>
+  </QueryState>
 
   <Sheet v-model:open="sheetOpen">
     <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
@@ -455,8 +454,8 @@ async function onDelete(card: Card) {
         <SheetFooter class="border-t">
           <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
           <div class="flex gap-3">
-            <Button type="submit" :disabled="saving">
-              {{ saving ? 'Enregistrement...' : editingId ? 'Mettre à jour la carte' : 'Ajouter la carte' }}
+            <Button type="submit" :disabled="saveMutation.isPending.value">
+              {{ saveMutation.isPending.value ? 'Enregistrement...' : editingId ? 'Mettre à jour la carte' : 'Ajouter la carte' }}
             </Button>
             <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
           </div>

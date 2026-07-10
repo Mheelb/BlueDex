@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { LayersIcon } from '@lucide/vue'
 import Autoplay from 'embla-carousel-autoplay'
 import { useQuery } from '@tanstack/vue-query'
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +8,7 @@ import { fetchSets, setKeys } from '@/queries/sets'
 import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
 import { cardKeys, fetchFeaturedCards } from '@/queries/cards'
 import HomeHero from '@/components/HomeHero.vue'
+import SetCard from '@/components/SetCard.vue'
 import QueryState from '@/components/QueryState.vue'
 
 const { data: sets, isPending: loading, error } = useQuery({
@@ -37,11 +37,6 @@ const { data: latestArticles } = useQuery({
   queryKey: articleKeys.published(4),
   queryFn: () => fetchPublishedArticles(4),
 })
-
-function formatDate(date: string | null) {
-  if (!date) return null
-  return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-}
 
 const setsCarouselApi = ref<CarouselApi>()
 const setsSelectedIndex = ref(0)
@@ -154,35 +149,7 @@ function goToArticleSlide(index: number) {
             :key="set.id"
             class="basis-full sm:basis-1/2 lg:basis-1/3"
           >
-            <RouterLink :to="{ name: 'set', params: { setSlug: set.slug } }" class="group block">
-              <div
-                class="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-2xl border bg-gradient-to-br from-primary to-primary/70 shadow-sm transition-shadow duration-300 group-hover:shadow-xl"
-              >
-                <Badge
-                  v-if="set.id === newestSetId"
-                  class="absolute top-3 right-3 z-10 bg-white text-primary"
-                >
-                  Nouveau
-                </Badge>
-
-                <img
-                  v-if="set.logo_url || set.symbol_url"
-                  :src="set.logo_url ?? set.symbol_url ?? undefined"
-                  :alt="set.name"
-                  class="max-h-[65%] max-w-[70%] object-contain drop-shadow-lg transition-transform duration-300 group-hover:scale-105"
-                />
-                <LayersIcon v-else class="size-20 text-primary-foreground/30" />
-              </div>
-
-              <div class="mt-3">
-                <p class="truncate text-lg font-semibold">{{ set.name }}</p>
-                <div class="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                  <span v-if="formatDate(set.release_date)">{{ formatDate(set.release_date) }}</span>
-                  <span v-if="formatDate(set.release_date)">·</span>
-                  <span>{{ set.card_count }} cartes</span>
-                </div>
-              </div>
-            </RouterLink>
+            <SetCard :set="set" :is-new="set.id === newestSetId" />
           </CarouselItem>
         </CarouselContent>
       </Carousel>

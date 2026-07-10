@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 import FormField from '@/components/FormField.vue'
+import PageHeader from '@/components/PageHeader.vue'
 
 const props = defineProps<{ setSlug: string }>()
 
@@ -285,13 +286,12 @@ async function onDelete(card: Card) {
 <template>
   <BackButton :to="{ name: 'admin-sets' }" label="Retour aux sets" class="mb-4" />
 
-  <div class="mb-6 flex items-center justify-between">
-    <h1 class="text-2xl font-bold">Admin · {{ set?.name ?? '...' }}</h1>
+  <PageHeader :title="`Admin · ${set?.name ?? '...'}`">
     <Button @click="openCreateSheet">
       <PlusIcon />
       Ajouter une nouvelle carte
     </Button>
-  </div>
+  </PageHeader>
 
   <p v-if="loading" class="text-muted-foreground">Chargement...</p>
 

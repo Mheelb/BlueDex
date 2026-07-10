@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 import FormField from '@/components/FormField.vue'
+import PageHeader from '@/components/PageHeader.vue'
 
 const articles = ref<Article[]>([])
 const loading = ref(true)
@@ -155,13 +156,12 @@ async function onDelete(article: Article) {
 <template>
   <BackButton :to="{ name: 'admin-sets' }" label="Retour aux sets" class="mb-4" />
 
-  <div class="mb-6 flex items-center justify-between">
-    <h1 class="text-2xl font-bold">Admin · Articles</h1>
+  <PageHeader title="Admin · Articles">
     <Button :disabled="generating" @click="onGenerate">
       <SparklesIcon />
       {{ generating ? 'Génération...' : 'Générer un nouvel article' }}
     </Button>
-  </div>
+  </PageHeader>
 
   <p v-if="error" class="mb-4 text-sm text-destructive">{{ error }}</p>
   <p v-if="loading" class="text-muted-foreground">Chargement...</p>

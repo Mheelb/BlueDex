@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
 import FormField from '@/components/FormField.vue'
+import PageHeader from '@/components/PageHeader.vue'
 
 const router = useRouter()
 
@@ -128,15 +129,12 @@ async function onDelete(set: CardSet) {
 </script>
 
 <template>
-  <div class="mb-6 flex items-center justify-between">
-    <h1 class="text-2xl font-bold">Admin · Sets</h1>
-    <div class="flex items-center gap-2">
-      <Button @click="openCreateSheet">
-        <PlusIcon />
-        Ajouter un set
-      </Button>
-    </div>
-  </div>
+  <PageHeader title="Admin · Sets">
+    <Button @click="openCreateSheet">
+      <PlusIcon />
+      Ajouter un set
+    </Button>
+  </PageHeader>
 
   <p v-if="loading" class="text-muted-foreground">Chargement...</p>
   <p v-else-if="sets.length === 0" class="text-muted-foreground">Aucun set pour le moment.</p>

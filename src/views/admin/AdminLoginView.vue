@@ -37,30 +37,28 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-sm px-4 py-16">
-    <Card>
-      <CardHeader>
-        <CardTitle class="text-xl">Connexion admin</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
-          <div class="flex flex-col gap-1.5">
-            <Label for="email">Email</Label>
-            <Input id="email" v-model="email" type="email" required autocomplete="username" />
-          </div>
+  <Card>
+    <CardHeader>
+      <CardTitle class="text-xl">Connexion admin</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
+        <div class="flex flex-col gap-1.5">
+          <Label for="email">Email</Label>
+          <Input id="email" v-model="email" type="email" required autocomplete="username" />
+        </div>
 
-          <div class="flex flex-col gap-1.5">
-            <Label for="password">Mot de passe</Label>
-            <Input id="password" v-model="password" type="password" required autocomplete="current-password" />
-          </div>
+        <div class="flex flex-col gap-1.5">
+          <Label for="password">Mot de passe</Label>
+          <Input id="password" v-model="password" type="password" required autocomplete="current-password" />
+        </div>
 
-          <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+        <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
 
-          <Button type="submit" :disabled="loading">
-            {{ loading ? 'Connexion...' : 'Se connecter' }}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
-  </div>
+        <Button type="submit" :disabled="loading">
+          {{ loading ? 'Connexion...' : 'Se connecter' }}
+        </Button>
+      </form>
+    </CardContent>
+  </Card>
 </template>

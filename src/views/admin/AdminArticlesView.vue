@@ -153,99 +153,97 @@ async function onDelete(article: Article) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-    <BackButton :to="{ name: 'admin-sets' }" label="Retour aux sets" class="mb-4" />
+  <BackButton :to="{ name: 'admin-sets' }" label="Retour aux sets" class="mb-4" />
 
-    <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold">Admin · Articles</h1>
-      <Button :disabled="generating" @click="onGenerate">
-        <SparklesIcon />
-        {{ generating ? 'Génération...' : 'Générer un nouvel article' }}
-      </Button>
-    </div>
-
-    <p v-if="error" class="mb-4 text-sm text-destructive">{{ error }}</p>
-    <p v-if="loading" class="text-muted-foreground">Chargement...</p>
-    <p v-else-if="articles.length === 0" class="text-muted-foreground">Aucun article pour le moment.</p>
-
-    <div v-else class="flex flex-col gap-3">
-      <Card v-for="article in articles" :key="article.id">
-        <CardContent class="flex items-center justify-between gap-4">
-          <div class="min-w-0">
-            <div class="flex items-center gap-2">
-              <p class="truncate font-medium">{{ article.title }}</p>
-              <Badge :variant="article.status === 'published' ? 'default' : 'secondary'">
-                {{ article.status === 'published' ? 'Publié' : 'Brouillon' }}
-              </Badge>
-            </div>
-            <p class="mt-0.5 truncate text-xs text-muted-foreground">{{ article.excerpt }}</p>
-          </div>
-          <div class="flex shrink-0 items-center gap-1">
-            <Button variant="outline" size="sm" @click="onTogglePublish(article)">
-              {{ article.status === 'published' ? 'Dépublier' : 'Publier' }}
-            </Button>
-            <Button variant="ghost" size="icon" @click="openEditSheet(article)">
-              <PencilIcon />
-            </Button>
-            <ConfirmDeleteDialog
-              :title="`Supprimer l'article « ${article.title} » ?`"
-              description="Cette action est définitive."
-              @confirm="onDelete(article)"
-            >
-              <Button variant="ghost" size="icon" class="text-destructive">
-                <Trash2Icon />
-              </Button>
-            </ConfirmDeleteDialog>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-
-    <Sheet v-model:open="sheetOpen">
-      <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
-        <SheetHeader class="border-b">
-          <SheetTitle>Modifier l'article</SheetTitle>
-        </SheetHeader>
-
-        <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSave" novalidate>
-          <div class="grid grid-cols-1 gap-3 p-4">
-            <div class="flex flex-col gap-1.5">
-              <Label for="article-title">Titre *</Label>
-              <Input id="article-title" v-model="form.title" :aria-invalid="!!fieldErrors.title" />
-              <p v-if="fieldErrors.title" class="text-xs text-destructive">{{ fieldErrors.title }}</p>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="article-slug">Slug *</Label>
-              <Input id="article-slug" v-model="form.slug" :aria-invalid="!!fieldErrors.slug" />
-              <p v-if="fieldErrors.slug" class="text-xs text-destructive">{{ fieldErrors.slug }}</p>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="article-excerpt">Extrait *</Label>
-              <Textarea id="article-excerpt" v-model="form.excerpt" rows="2" :aria-invalid="!!fieldErrors.excerpt" />
-              <p v-if="fieldErrors.excerpt" class="text-xs text-destructive">{{ fieldErrors.excerpt }}</p>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="article-cover">URL de l'image de couverture</Label>
-              <Input id="article-cover" v-model="form.cover_image_url" placeholder="Optionnel" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="article-content">Contenu (markdown) *</Label>
-              <Textarea id="article-content" v-model="form.content" rows="14" :aria-invalid="!!fieldErrors.content" />
-              <p v-if="fieldErrors.content" class="text-xs text-destructive">{{ fieldErrors.content }}</p>
-            </div>
-          </div>
-
-          <SheetFooter class="border-t">
-            <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
-            <div class="flex gap-3">
-              <Button type="submit" :disabled="saving">
-                {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
-              </Button>
-              <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
-            </div>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold">Admin · Articles</h1>
+    <Button :disabled="generating" @click="onGenerate">
+      <SparklesIcon />
+      {{ generating ? 'Génération...' : 'Générer un nouvel article' }}
+    </Button>
   </div>
+
+  <p v-if="error" class="mb-4 text-sm text-destructive">{{ error }}</p>
+  <p v-if="loading" class="text-muted-foreground">Chargement...</p>
+  <p v-else-if="articles.length === 0" class="text-muted-foreground">Aucun article pour le moment.</p>
+
+  <div v-else class="flex flex-col gap-3">
+    <Card v-for="article in articles" :key="article.id">
+      <CardContent class="flex items-center justify-between gap-4">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <p class="truncate font-medium">{{ article.title }}</p>
+            <Badge :variant="article.status === 'published' ? 'default' : 'secondary'">
+              {{ article.status === 'published' ? 'Publié' : 'Brouillon' }}
+            </Badge>
+          </div>
+          <p class="mt-0.5 truncate text-xs text-muted-foreground">{{ article.excerpt }}</p>
+        </div>
+        <div class="flex shrink-0 items-center gap-1">
+          <Button variant="outline" size="sm" @click="onTogglePublish(article)">
+            {{ article.status === 'published' ? 'Dépublier' : 'Publier' }}
+          </Button>
+          <Button variant="ghost" size="icon" @click="openEditSheet(article)">
+            <PencilIcon />
+          </Button>
+          <ConfirmDeleteDialog
+            :title="`Supprimer l'article « ${article.title} » ?`"
+            description="Cette action est définitive."
+            @confirm="onDelete(article)"
+          >
+            <Button variant="ghost" size="icon" class="text-destructive">
+              <Trash2Icon />
+            </Button>
+          </ConfirmDeleteDialog>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+
+  <Sheet v-model:open="sheetOpen">
+    <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
+      <SheetHeader class="border-b">
+        <SheetTitle>Modifier l'article</SheetTitle>
+      </SheetHeader>
+
+      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSave" novalidate>
+        <div class="grid grid-cols-1 gap-3 p-4">
+          <div class="flex flex-col gap-1.5">
+            <Label for="article-title">Titre *</Label>
+            <Input id="article-title" v-model="form.title" :aria-invalid="!!fieldErrors.title" />
+            <p v-if="fieldErrors.title" class="text-xs text-destructive">{{ fieldErrors.title }}</p>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="article-slug">Slug *</Label>
+            <Input id="article-slug" v-model="form.slug" :aria-invalid="!!fieldErrors.slug" />
+            <p v-if="fieldErrors.slug" class="text-xs text-destructive">{{ fieldErrors.slug }}</p>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="article-excerpt">Extrait *</Label>
+            <Textarea id="article-excerpt" v-model="form.excerpt" rows="2" :aria-invalid="!!fieldErrors.excerpt" />
+            <p v-if="fieldErrors.excerpt" class="text-xs text-destructive">{{ fieldErrors.excerpt }}</p>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="article-cover">URL de l'image de couverture</Label>
+            <Input id="article-cover" v-model="form.cover_image_url" placeholder="Optionnel" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="article-content">Contenu (markdown) *</Label>
+            <Textarea id="article-content" v-model="form.content" rows="14" :aria-invalid="!!fieldErrors.content" />
+            <p v-if="fieldErrors.content" class="text-xs text-destructive">{{ fieldErrors.content }}</p>
+          </div>
+        </div>
+
+        <SheetFooter class="border-t">
+          <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+          <div class="flex gap-3">
+            <Button type="submit" :disabled="saving">
+              {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
+            </Button>
+            <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
+          </div>
+        </SheetFooter>
+      </form>
+    </SheetContent>
+  </Sheet>
 </template>

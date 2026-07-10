@@ -42,24 +42,22 @@ watch(() => props.slug, load)
 </script>
 
 <template>
-  <div class="mx-auto max-w-screen-md px-4 py-8 sm:px-6 lg:px-8">
-    <p v-if="loading" class="text-muted-foreground">Chargement...</p>
-    <p v-else-if="error" class="text-destructive">{{ error }}</p>
+  <p v-if="loading" class="text-muted-foreground">Chargement...</p>
+  <p v-else-if="error" class="text-destructive">{{ error }}</p>
 
-    <template v-else-if="article">
-      <BackButton :to="{ name: 'articles' }" label="Retour aux actus" class="mb-6" />
+  <template v-else-if="article">
+    <BackButton :to="{ name: 'articles' }" label="Retour aux actus" class="mb-6" />
 
-      <p class="text-sm text-muted-foreground">{{ formatDate(article.published_at) }}</p>
-      <h1 class="mt-1 text-3xl font-bold">{{ article.title }}</h1>
+    <p class="text-sm text-muted-foreground">{{ formatDate(article.published_at) }}</p>
+    <h1 class="mt-1 text-3xl font-bold">{{ article.title }}</h1>
 
-      <img
-        v-if="article.cover_image_url"
-        :src="article.cover_image_url"
-        :alt="article.title"
-        class="mt-6 aspect-video w-full rounded-xl bg-gradient-to-br from-primary to-primary/70 object-cover"
-      />
+    <img
+      v-if="article.cover_image_url"
+      :src="article.cover_image_url"
+      :alt="article.title"
+      class="mt-6 aspect-video w-full rounded-xl bg-gradient-to-br from-primary to-primary/70 object-cover"
+    />
 
-      <div class="prose prose-neutral dark:prose-invert mt-8 max-w-none" v-html="contentHtml" />
-    </template>
-  </div>
+    <div class="prose prose-neutral dark:prose-invert mt-8 max-w-none" v-html="contentHtml" />
+  </template>
 </template>

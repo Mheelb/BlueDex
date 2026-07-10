@@ -128,95 +128,93 @@ async function onDelete(set: CardSet) {
 </script>
 
 <template>
-  <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-    <div class="mb-6 flex items-center justify-between">
-      <h1 class="text-2xl font-bold">Admin · Sets</h1>
-      <div class="flex items-center gap-2">
-        <Button @click="openCreateSheet">
-          <PlusIcon />
-          Ajouter un set
-        </Button>
-      </div>
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-bold">Admin · Sets</h1>
+    <div class="flex items-center gap-2">
+      <Button @click="openCreateSheet">
+        <PlusIcon />
+        Ajouter un set
+      </Button>
     </div>
-
-    <p v-if="loading" class="text-muted-foreground">Chargement...</p>
-    <p v-else-if="sets.length === 0" class="text-muted-foreground">Aucun set pour le moment.</p>
-
-    <div v-else class="flex flex-col gap-3">
-      <Card v-for="set in sets" :key="set.id">
-        <CardContent class="flex items-center justify-between">
-          <div>
-            <p class="font-medium">{{ set.name }}</p>
-            <p class="mt-0.5 text-xs text-muted-foreground">
-              {{ set.slug }} · <Badge variant="secondary">{{ set.card_count }} cartes</Badge>
-            </p>
-          </div>
-          <div class="flex items-center gap-1">
-            <Button as-child variant="ghost" size="icon">
-              <RouterLink :to="{ name: 'admin-set-cards', params: { setSlug: set.slug } }" title="Gérer les cartes">
-                <ListIcon />
-              </RouterLink>
-            </Button>
-            <Button variant="ghost" size="icon" title="Modifier le set" @click="openEditSheet(set)">
-              <PencilIcon />
-            </Button>
-            <ConfirmDeleteDialog
-              :title="`Supprimer le set « ${set.name} » ?`"
-              description="Toutes ses cartes seront définitivement supprimées."
-              @confirm="onDelete(set)"
-            >
-              <Button variant="ghost" size="icon" class="text-destructive">
-                <Trash2Icon />
-              </Button>
-            </ConfirmDeleteDialog>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-
-    <Sheet v-model:open="sheetOpen">
-      <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
-        <SheetHeader class="border-b">
-          <SheetTitle>{{ editingId ? 'Modifier le set' : 'Nouveau set' }}</SheetTitle>
-        </SheetHeader>
-
-        <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSubmit" novalidate>
-          <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
-            <div class="flex flex-col gap-1.5">
-              <Label for="set-name">Nom *</Label>
-              <Input id="set-name" v-model="form.name" :aria-invalid="!!fieldErrors.name" />
-              <p v-if="fieldErrors.name" class="text-xs text-destructive">{{ fieldErrors.name }}</p>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="set-slug">Slug *</Label>
-              <Input id="set-slug" v-model="form.slug" placeholder="ex: base-set" :aria-invalid="!!fieldErrors.slug" />
-              <p v-if="fieldErrors.slug" class="text-xs text-destructive">{{ fieldErrors.slug }}</p>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="set-release">Date de sortie</Label>
-              <Input id="set-release" v-model="form.release_date" type="date" />
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <Label for="set-logo">URL du logo</Label>
-              <Input id="set-logo" v-model="form.logo_url" placeholder="Optionnel" />
-            </div>
-            <div class="flex flex-col gap-1.5 sm:col-span-2">
-              <Label for="set-symbol">URL du symbole</Label>
-              <Input id="set-symbol" v-model="form.symbol_url" placeholder="Optionnel" />
-            </div>
-          </div>
-
-          <SheetFooter class="border-t">
-            <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
-            <div class="flex gap-3">
-              <Button type="submit" :disabled="saving">
-                {{ saving ? 'Enregistrement...' : editingId ? 'Mettre à jour le set' : 'Créer le set' }}
-              </Button>
-              <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
-            </div>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
   </div>
+
+  <p v-if="loading" class="text-muted-foreground">Chargement...</p>
+  <p v-else-if="sets.length === 0" class="text-muted-foreground">Aucun set pour le moment.</p>
+
+  <div v-else class="flex flex-col gap-3">
+    <Card v-for="set in sets" :key="set.id">
+      <CardContent class="flex items-center justify-between">
+        <div>
+          <p class="font-medium">{{ set.name }}</p>
+          <p class="mt-0.5 text-xs text-muted-foreground">
+            {{ set.slug }} · <Badge variant="secondary">{{ set.card_count }} cartes</Badge>
+          </p>
+        </div>
+        <div class="flex items-center gap-1">
+          <Button as-child variant="ghost" size="icon">
+            <RouterLink :to="{ name: 'admin-set-cards', params: { setSlug: set.slug } }" title="Gérer les cartes">
+              <ListIcon />
+            </RouterLink>
+          </Button>
+          <Button variant="ghost" size="icon" title="Modifier le set" @click="openEditSheet(set)">
+            <PencilIcon />
+          </Button>
+          <ConfirmDeleteDialog
+            :title="`Supprimer le set « ${set.name} » ?`"
+            description="Toutes ses cartes seront définitivement supprimées."
+            @confirm="onDelete(set)"
+          >
+            <Button variant="ghost" size="icon" class="text-destructive">
+              <Trash2Icon />
+            </Button>
+          </ConfirmDeleteDialog>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+
+  <Sheet v-model:open="sheetOpen">
+    <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">
+      <SheetHeader class="border-b">
+        <SheetTitle>{{ editingId ? 'Modifier le set' : 'Nouveau set' }}</SheetTitle>
+      </SheetHeader>
+
+      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="onSubmit" novalidate>
+        <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
+          <div class="flex flex-col gap-1.5">
+            <Label for="set-name">Nom *</Label>
+            <Input id="set-name" v-model="form.name" :aria-invalid="!!fieldErrors.name" />
+            <p v-if="fieldErrors.name" class="text-xs text-destructive">{{ fieldErrors.name }}</p>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="set-slug">Slug *</Label>
+            <Input id="set-slug" v-model="form.slug" placeholder="ex: base-set" :aria-invalid="!!fieldErrors.slug" />
+            <p v-if="fieldErrors.slug" class="text-xs text-destructive">{{ fieldErrors.slug }}</p>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="set-release">Date de sortie</Label>
+            <Input id="set-release" v-model="form.release_date" type="date" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <Label for="set-logo">URL du logo</Label>
+            <Input id="set-logo" v-model="form.logo_url" placeholder="Optionnel" />
+          </div>
+          <div class="flex flex-col gap-1.5 sm:col-span-2">
+            <Label for="set-symbol">URL du symbole</Label>
+            <Input id="set-symbol" v-model="form.symbol_url" placeholder="Optionnel" />
+          </div>
+        </div>
+
+        <SheetFooter class="border-t">
+          <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+          <div class="flex gap-3">
+            <Button type="submit" :disabled="saving">
+              {{ saving ? 'Enregistrement...' : editingId ? 'Mettre à jour le set' : 'Créer le set' }}
+            </Button>
+            <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
+          </div>
+        </SheetFooter>
+      </form>
+    </SheetContent>
+  </Sheet>
 </template>

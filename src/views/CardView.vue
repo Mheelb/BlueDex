@@ -48,45 +48,43 @@ watch(() => [props.setSlug, props.cardNumber], load)
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-    <p v-if="loading" class="text-muted-foreground">Chargement...</p>
-    <p v-else-if="error" class="text-destructive">{{ error }}</p>
+  <p v-if="loading" class="text-muted-foreground">Chargement...</p>
+  <p v-else-if="error" class="text-destructive">{{ error }}</p>
 
-    <template v-else-if="card && set">
-      <BackButton :to="{ name: 'set', params: { setSlug: set.slug } }" :label="`Retour à ${set.name}`" class="mb-6" />
+  <template v-else-if="card && set">
+    <BackButton :to="{ name: 'set', params: { setSlug: set.slug } }" :label="`Retour à ${set.name}`" class="mb-6" />
 
-      <div class="grid grid-cols-1 gap-10 md:grid-cols-2">
-        <div class="mx-auto w-full max-w-sm">
-          <CardImage :src="card.image_url" :alt="card.name" :is-holo="card.is_holo" />
-          <p v-if="card.artist" class="mt-2 text-center text-xs text-muted-foreground">
-            Illustration : {{ card.artist }}
-          </p>
+    <div class="grid grid-cols-1 gap-10 md:grid-cols-2">
+      <div class="mx-auto w-full max-w-sm">
+        <CardImage :src="card.image_url" :alt="card.name" :is-holo="card.is_holo" />
+        <p v-if="card.artist" class="mt-2 text-center text-xs text-muted-foreground">
+          Illustration : {{ card.artist }}
+        </p>
+      </div>
+
+      <div>
+        <div
+          v-if="card.is_holo || card.is_signed || card.is_numbered || card.is_full_art || card.is_overframe"
+          class="mb-2 flex flex-wrap gap-2"
+        >
+          <Badge v-if="card.is_holo" variant="secondary">Holo</Badge>
+          <Badge v-if="card.is_signed" variant="secondary">Signée</Badge>
+          <Badge v-if="card.is_numbered" variant="secondary">Numérotée /{{ card.numbered_total }}</Badge>
+          <Badge v-if="card.is_full_art" variant="secondary">Full Art</Badge>
+          <Badge v-if="card.is_overframe" variant="secondary">Overframe</Badge>
         </div>
 
-        <div>
-          <div
-            v-if="card.is_holo || card.is_signed || card.is_numbered || card.is_full_art || card.is_overframe"
-            class="mb-2 flex flex-wrap gap-2"
-          >
-            <Badge v-if="card.is_holo" variant="secondary">Holo</Badge>
-            <Badge v-if="card.is_signed" variant="secondary">Signée</Badge>
-            <Badge v-if="card.is_numbered" variant="secondary">Numérotée /{{ card.numbered_total }}</Badge>
-            <Badge v-if="card.is_full_art" variant="secondary">Full Art</Badge>
-            <Badge v-if="card.is_overframe" variant="secondary">Overframe</Badge>
-          </div>
+        <h1 class="text-3xl font-bold">{{ card.name }}</h1>
+        <p class="mt-1 text-sm text-muted-foreground">{{ set.name }} · #{{ card.number }}</p>
 
-          <h1 class="text-3xl font-bold">{{ card.name }}</h1>
-          <p class="mt-1 text-sm text-muted-foreground">{{ set.name }} · #{{ card.number }}</p>
+        <CardBadges :card="card" class="mt-4" />
+        <CardStatPills :card="card" class="mt-6" />
 
-          <CardBadges :card="card" class="mt-4" />
-          <CardStatPills :card="card" class="mt-6" />
-
-          <div v-if="card.effect" class="mt-6 rounded-lg border bg-card p-4">
-            <p class="mb-1 text-sm font-medium text-muted-foreground">Effet</p>
-            <CardEffectText :text="card.effect" />
-          </div>
+        <div v-if="card.effect" class="mt-6 rounded-lg border bg-card p-4">
+          <p class="mb-1 text-sm font-medium text-muted-foreground">Effet</p>
+          <CardEffectText :text="card.effect" />
         </div>
       </div>
-    </template>
-  </div>
+    </div>
+  </template>
 </template>

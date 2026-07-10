@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppHeader from '@/components/AppHeader.vue'
 import AppFooter from '@/components/AppFooter.vue'
+import PageContainer from '@/components/PageContainer.vue'
 </script>
 
 <template>
@@ -8,7 +9,9 @@ import AppFooter from '@/components/AppFooter.vue'
     <div class="bg-grid-fade pointer-events-none absolute inset-x-0 top-0 -z-10 h-screen" aria-hidden="true" />
     <AppHeader />
     <main class="flex-1">
-      <RouterView />
+      <PageContainer>
+        <RouterView />
+      </PageContainer>
     </main>
     <AppFooter />
   </div>

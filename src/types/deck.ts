@@ -21,6 +21,11 @@ export const DECK_FORMAT_LABELS: Record<DeckFormat, string> = {
   rapide: 'Rapide',
 }
 
+export const DECK_FORMAT_COLORS: Record<DeckFormat, { bg: string; text: string }> = {
+  normal: { bg: '#2454C7', text: '#ffffff' },
+  rapide: { bg: '#D97706', text: '#ffffff' },
+}
+
 export interface Deck {
   id: string
   user_id: string
@@ -42,4 +47,42 @@ export interface CardWithSet extends Card {
     name: string
     slug: string
   }
+}
+
+export interface DeckListItem {
+  id: string
+  name: string
+  format: DeckFormat
+  star_count: number
+  updated_at: string
+  user_id: string
+  author: { display_name: string; avatar_url: string | null } | null
+}
+
+export interface PaginatedResult<T> {
+  rows: T[]
+  total: number
+}
+
+export const DECK_SORTS = ['updated_at-desc', 'updated_at-asc', 'name-asc', 'name-desc', 'star_count-desc'] as const
+export type DeckSort = (typeof DECK_SORTS)[number]
+
+export const DECK_SORT_LABELS: Record<DeckSort, string> = {
+  'updated_at-desc': 'Plus récent',
+  'updated_at-asc': 'Plus ancien',
+  'name-asc': 'Nom (A → Z)',
+  'name-desc': 'Nom (Z → A)',
+  'star_count-desc': 'Plus populaire',
+}
+
+export interface DeckListQuery {
+  search: string
+  sort: DeckSort
+  // Filtre par format pour l'instant ; d'autres facettes (niveau, sous-type...)
+  // viendront plus tard une fois qu'on aura un système de tags sur les decks.
+  format: DeckFormat | 'all'
+}
+
+export function createEmptyDeckListQuery(): DeckListQuery {
+  return { search: '', sort: 'updated_at-desc', format: 'all' }
 }

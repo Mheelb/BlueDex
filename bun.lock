@@ -11,6 +11,7 @@
         "@tanstack/pacer": "^0.21.1",
         "@tanstack/vue-form": "^1.33.1",
         "@tanstack/vue-query": "^5.101.2",
+        "@tanstack/vue-table": "^8.21.3",
         "@tanstack/vue-virtual": "^3.13.31",
         "@vueuse/core": "^14.3.0",
         "class-variance-authority": "^0.7.1",
@@ -184,6 +185,8 @@
 
     "@tanstack/store": ["@tanstack/store@0.11.0", "", {}, "sha512-WlzzCt3xi0G6pCAJu1U+2jiECwabETDpQDi3hfkFZvJii9AuZqEKbOiVarX1/bWhTNjU486yQtJCCasi/0q+Cw=="],
 
+    "@tanstack/table-core": ["@tanstack/table-core@8.21.3", "", {}, "sha512-ldZXEhOBb8Is7xLs01fR3YEc3DERiz5silj8tnGkFZytt1abEvl/GhUmCE0PMLaMPTa3Jk4HbKmRlHmu+gCftg=="],
+
     "@tanstack/virtual-core": ["@tanstack/virtual-core@3.17.3", "", {}, "sha512-8Np/TFELpI0ySuJoVmjvOrQYXH/8sTX0Biv9szhFhY39xOdAAY+smrMxjxOum/ux3eM8MUJQsEJ0/R0UpvC8dw=="],
 
     "@tanstack/vue-form": ["@tanstack/vue-form@1.33.1", "", { "dependencies": { "@tanstack/form-core": "1.33.1", "@tanstack/vue-store": "^0.11.0" }, "peerDependencies": { "vue": "^3.4.0" } }, "sha512-k6xzSva3pKLFGf1a9l1GJxwzEsemoL5ABMTe/irg5hJmQx8aqPPjUoIk8tsjmSyb6+oY1weBbSEIDQiiRyfIdg=="],
@@ -193,6 +196,8 @@
     "@tanstack/vue-query-devtools": ["@tanstack/vue-query-devtools@6.1.36", "", { "dependencies": { "@tanstack/query-devtools": "5.101.2" }, "peerDependencies": { "@tanstack/vue-query": "^5.101.2", "vue": "^3.3.0" } }, "sha512-1/FuHTIvFyyh3tf+BPdlHtnG6ytCi8o8PRfpYn17B9i2no5WVcKENN9+S+IwXGbjPIui3b0MawHohjssEjZuuA=="],
 
     "@tanstack/vue-store": ["@tanstack/vue-store@0.11.0", "", { "dependencies": { "@tanstack/store": "0.11.0", "vue-demi": "^0.14.10" }, "peerDependencies": { "@vue/composition-api": "^1.2.1", "vue": "^2.5.0 || ^3.0.0" }, "optionalPeers": ["@vue/composition-api"] }, "sha512-w1lE4D7oo6nIUhTQvL/RoTgcvoYJw+KvttWPNJd/Xu+MvNxMnjxFF/LgFp9vwmbNbiGhGCg3ZoPJptwjrfwNYw=="],
+
+    "@tanstack/vue-table": ["@tanstack/vue-table@8.21.3", "", { "dependencies": { "@tanstack/table-core": "8.21.3" }, "peerDependencies": { "vue": ">=3.2" } }, "sha512-rusRyd77c5tDPloPskctMyPLFEQUeBzxdQ+2Eow4F7gDPlPOB1UnnhzfpdvqZ8ZyX2rRNGmqNnQWm87OI2OQPw=="],
 
     "@tanstack/vue-virtual": ["@tanstack/vue-virtual@3.13.31", "", { "dependencies": { "@tanstack/virtual-core": "3.17.3" }, "peerDependencies": { "vue": "^2.7.0 || ^3.0.0" } }, "sha512-wZMEoSf852jQqaf3Ika1J7PiBae6341LNy/2CxmIyn0XKDQXMuK41wVX+xp6G0yx8jyR95Ef+Tdr13DK7mbJtQ=="],
 

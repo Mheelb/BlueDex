@@ -2,8 +2,9 @@
 import { computed } from 'vue'
 import { useVueTable, getCoreRowModel, type ColumnDef, type Updater, type PaginationState } from '@tanstack/vue-table'
 import { BookmarkIcon, ChevronLeftIcon, ChevronRightIcon, LayersIcon, StarIcon } from '@lucide/vue'
+import type { DeckFormat } from '@/types/deck'
 import type { DeckListItem } from '@/types/deck'
-import { DECK_FORMAT_COLORS, DECK_FORMAT_LABELS } from '@/types/deck'
+import { DECK_FORMAT_LABELS } from '@/types/deck'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,11 @@ const emit = defineEmits<{
 function starTitle(deck: DeckListItem) {
   if (deck.user_id === props.currentUserId) return 'Tu ne peux pas voter pour ton propre deck.'
   return props.starredIds.has(deck.id) ? 'Retirer ta Blue Star' : 'Donner une Blue Star'
+}
+
+const FORMAT_BADGE_VARIANT: Record<DeckFormat, 'default' | 'outline'> = {
+  normal: 'default',
+  rapide: 'outline',
 }
 
 function formatDate(value: string) {
@@ -78,11 +84,15 @@ const table = useVueTable({
         :key="row.id"
         class="flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
       >
-        <div
-          class="flex size-11 shrink-0 items-center justify-center rounded-xl"
-          :style="{ backgroundColor: DECK_FORMAT_COLORS[row.original.format].bg, color: DECK_FORMAT_COLORS[row.original.format].text }"
-        >
-          <LayersIcon class="size-5" />
+        <div class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary text-primary">
+          <img
+            v-if="row.original.cover_card?.image_url"
+            :src="row.original.cover_card.image_url"
+            :alt="row.original.cover_card.name"
+            class="h-full w-full object-cover"
+            :class="{ 'ring-2 ring-primary': row.original.cover_card.is_holo }"
+          />
+          <LayersIcon v-else class="size-5" />
         </div>
 
         <div class="min-w-0 flex-1">
@@ -94,12 +104,7 @@ const table = useVueTable({
           </RouterLink>
 
           <div class="mt-1.5 flex flex-wrap items-center gap-2">
-            <Badge
-              :style="{
-                backgroundColor: DECK_FORMAT_COLORS[row.original.format].bg,
-                color: DECK_FORMAT_COLORS[row.original.format].text,
-              }"
-            >
+            <Badge :variant="FORMAT_BADGE_VARIANT[row.original.format]">
               {{ DECK_FORMAT_LABELS[row.original.format] }}
             </Badge>
             <button

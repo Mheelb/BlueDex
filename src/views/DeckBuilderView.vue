@@ -19,7 +19,7 @@ import {
   removeBookmark,
   removeStar,
 } from '@/queries/decks'
-import Heading from '@/components/Heading.vue'
+import PageIntro from '@/components/PageIntro.vue'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import DeckTable from '@/components/deckbuilder/DeckTable.vue'
@@ -96,7 +96,10 @@ const bookmarkMutation = useMutation({
       await addBookmark(deckId, userId.value)
     }
   },
-  onSuccess: () => {
+  onSuccess: async () => {
+    if (userId.value) {
+      await queryClient.invalidateQueries({ queryKey: deckKeys.bookmarkedIds(userId.value) })
+    }
     queryClient.invalidateQueries({ queryKey: deckKeys.all })
   },
   onError: (err) => {
@@ -131,31 +134,20 @@ function onToggleStar(deckId: string) {
 </script>
 
 <template>
-  <div
-    class="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#0b1330] via-[#111d4a] to-[#0a1128] px-6 py-10 sm:px-12 sm:py-12"
+  <PageIntro
+    eyebrow="Deck Builder"
+    title="Construis ton deck"
+    description="Assemble tes cartes, respecte les règles du format et partage tes decks avec la communauté Blue Rising."
   >
-    <div
-      class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(80,130,255,0.3),transparent_60%)]"
-      aria-hidden="true"
-    />
-
-    <div class="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p class="text-xs font-semibold tracking-[0.2em] text-blue-400 uppercase">Deck Builder</p>
-        <Heading size="3xl" class="mt-3 text-white">Construis ton deck</Heading>
-        <p class="mt-3 max-w-lg text-zinc-400">
-          Assemble tes cartes, respecte les règles du format et partage tes decks avec la communauté Blue Rising.
-        </p>
-      </div>
-
-      <Button as-child size="lg" class="shrink-0 bg-blue-600 text-white hover:bg-blue-500">
+    <template #actions>
+      <Button as-child size="lg" class="shrink-0 bg-primary text-primary-foreground hover:bg-gold-bright">
         <RouterLink :to="{ name: 'deck-builder-new' }">
           <PlusIcon />
           Créer un deck
         </RouterLink>
       </Button>
-    </div>
-  </div>
+    </template>
+  </PageIntro>
 
   <Tabs default-value="public">
     <TabsList>

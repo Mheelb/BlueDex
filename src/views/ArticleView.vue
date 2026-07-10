@@ -37,7 +37,7 @@ function formatDate(date: string | null) {
         class="mt-6 aspect-video w-full rounded-xl bg-gradient-to-br from-primary to-primary/70 object-cover"
       />
 
-      <div class="prose prose-neutral dark:prose-invert mt-8 max-w-none" v-html="contentHtml" />
+      <div class="prose prose-invert mt-8 max-w-none" v-html="contentHtml" />
     </template>
   </QueryState>
 </template>

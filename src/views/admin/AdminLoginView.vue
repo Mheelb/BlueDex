@@ -37,7 +37,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <Card>
+  <Card class="mx-auto w-full max-w-sm">
     <CardHeader>
       <CardTitle class="text-xl">Connexion admin</CardTitle>
     </CardHeader>

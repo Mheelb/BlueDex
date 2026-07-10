@@ -26,7 +26,7 @@ const year = new Date().getFullYear()
           </div>
 
           <div class="flex flex-col gap-2">
-            <p class="font-medium text-foreground">Admin</p>
+            <p class="font-medium text-foreground">Compte</p>
             <TextLink :to="{ name: 'admin-login' }">
               Connexion
             </TextLink>

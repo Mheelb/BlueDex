@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVueTable, getCoreRowModel, type ColumnDef, type Updater, type PaginationState } from '@tanstack/vue-table'
-import { BookmarkIcon, ChevronLeftIcon, ChevronRightIcon, LayersIcon, StarIcon } from '@lucide/vue'
+import { BookmarkIcon, ChevronLeftIcon, ChevronRightIcon, LayersIcon } from '@lucide/vue'
 import type { DeckFormat } from '@/types/deck'
 import type { DeckListItem } from '@/types/deck'
 import { DECK_FORMAT_LABELS } from '@/types/deck'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import QueryState from '@/components/QueryState.vue'
+import QueryState from '@/components/common/QueryState.vue'
+import BrandStar from '@/components/common/BrandStar.vue'
 
 const props = defineProps<{
   rows: DeckListItem[]
@@ -110,12 +111,12 @@ const table = useVueTable({
             <button
               type="button"
               class="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-              :class="starredIds.has(row.original.id) ? 'text-primary' : 'text-muted-foreground hover:text-primary'"
+              :class="starredIds.has(row.original.id) ? 'text-[#2e6bff]' : 'text-muted-foreground hover:text-[#2e6bff]'"
               :disabled="row.original.user_id === currentUserId"
               :title="starTitle(row.original)"
               @click="emit('toggle-star', row.original.id)"
             >
-              <StarIcon class="size-3.5" :fill="starredIds.has(row.original.id) ? 'currentColor' : 'none'" />
+              <BrandStar class="size-10 cursor-pointer" />
               {{ row.original.star_count }}
             </button>
             <span class="text-xs text-muted-foreground">Mis à jour le {{ formatDate(row.original.updated_at) }}</span>

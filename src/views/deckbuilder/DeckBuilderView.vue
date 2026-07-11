@@ -19,7 +19,7 @@ import {
   removeBookmark,
   removeStar,
 } from '@/queries/decks'
-import PageIntro from '@/components/PageIntro.vue'
+import PageIntro from '@/components/common/PageIntro.vue'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import DeckTable from '@/components/deckbuilder/DeckTable.vue'

@@ -2,9 +2,9 @@
 import { NewspaperIcon } from '@lucide/vue'
 import { useQuery } from '@tanstack/vue-query'
 import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
-import QueryState from '@/components/QueryState.vue'
-import Heading from '@/components/Heading.vue'
-import PageIntro from '@/components/PageIntro.vue'
+import QueryState from '@/components/common/QueryState.vue'
+import Heading from '@/components/common/Heading.vue'
+import PageIntro from '@/components/common/PageIntro.vue'
 
 const { data: articles, isPending: loading, error } = useQuery({
   queryKey: articleKeys.published(),

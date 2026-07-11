@@ -3,9 +3,9 @@ import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { renderMarkdown } from '@/lib/markdown'
 import { articleKeys, fetchArticleBySlug } from '@/queries/articles'
-import BackButton from '@/components/BackButton.vue'
-import QueryState from '@/components/QueryState.vue'
-import Heading from '@/components/Heading.vue'
+import BackButton from '@/components/common/BackButton.vue'
+import QueryState from '@/components/common/QueryState.vue'
+import Heading from '@/components/common/Heading.vue'
 
 const props = defineProps<{ slug: string }>()
 

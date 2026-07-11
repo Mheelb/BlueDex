@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Card } from '@/types/card'
-import CardImage from '@/components/CardImage.vue'
+import CardImage from '@/components/cards/CardImage.vue'
 import { Button } from '@/components/ui/button'
 
 defineProps<{
@@ -22,6 +22,7 @@ function fanStyle(index: number) {
     top: f.top,
     transform: `rotate(${f.rotate}deg)`,
     zIndex: f.z,
+    animationDelay: `${150 + index * 120}ms`,
   }
 }
 </script>
@@ -37,7 +38,7 @@ function fanStyle(index: number) {
     />
 
     <div class="grid grid-cols-1 items-center gap-8 px-8 py-12 sm:px-12 sm:py-14 lg:grid-cols-[1.15fr_0.85fr]">
-      <div class="relative z-10">
+      <div class="relative z-10 animate-in fade-in-0 slide-in-from-left-4 duration-700 ease-out">
         <p class="font-engraved text-xs font-bold tracking-[0.22em] text-primary uppercase">TCG · Blue Rising</p>
         <h1 class="mt-4 font-blackletter text-6xl leading-none text-foreground sm:text-7xl">BlueDex</h1>
         <p class="mt-5 max-w-md text-base text-muted-foreground">
@@ -64,12 +65,15 @@ function fanStyle(index: number) {
         </div>
       </div>
 
-      <div v-if="featuredCards.length > 0" class="relative z-10 mx-auto h-56 w-full max-w-xs sm:h-72 sm:max-w-sm">
+      <div
+        v-if="featuredCards.length > 0"
+        class="relative z-10 mx-auto h-56 w-full max-w-xs animate-in fade-in-0 duration-700 ease-out sm:h-72 sm:max-w-sm"
+      >
         <RouterLink
           v-for="(card, index) in featuredCards"
           :key="card.id"
           :to="{ name: 'card', params: { setSlug: featuredSetSlug, cardNumber: card.number } }"
-          class="absolute block w-28 rounded-xl border-2 border-primary shadow-[0_14px_26px_rgba(0,0,0,0.45)] transition-transform duration-300 hover:z-20! hover:-translate-y-2 sm:w-36"
+          class="absolute block w-28 rounded-xl border-2 border-primary shadow-[0_14px_26px_rgba(0,0,0,0.45)] animate-in fade-in-0 zoom-in-90 fill-mode-backwards transition-transform duration-300 hover:z-20! hover:-translate-y-2 sm:w-36"
           :style="fanStyle(index)"
         >
           <CardImage :src="card.image_url" :alt="card.name" :is-holo="card.is_holo" />

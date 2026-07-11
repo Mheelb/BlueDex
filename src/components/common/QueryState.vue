@@ -23,5 +23,7 @@ const props = withDefaults(defineProps<{
   </div>
   <p v-else-if="error" :class="cn('text-destructive', props.class)">{{ error }}</p>
   <p v-else-if="empty" :class="cn('text-muted-foreground', props.class)">{{ emptyMessage }}</p>
-  <slot v-else />
+  <div v-else class="animate-in fade-in-0 slide-in-from-bottom-2 duration-500">
+    <slot />
+  </div>
 </template>

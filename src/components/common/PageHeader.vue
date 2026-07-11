@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
 import { cn } from '@/lib/utils'
-import Heading from '@/components/Heading.vue'
+import Heading from '@/components/common/Heading.vue'
 
 const props = defineProps<{
   title: string

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Card } from '@/types/card'
-import StatPill from '@/components/StatPill.vue'
+import StatPill from '@/components/cards/StatPill.vue'
 
 defineProps<{ card: Card }>()
 </script>

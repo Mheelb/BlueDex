@@ -4,14 +4,16 @@ import Autoplay from 'embla-carousel-autoplay'
 import { useQuery } from '@tanstack/vue-query'
 import { Badge } from '@/components/ui/badge'
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel'
+import { Separator } from '@/components/ui/separator'
 import { fetchSets, setKeys } from '@/queries/sets'
 import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
 import { cardKeys, fetchFeaturedCards } from '@/queries/cards'
-import HomeHero from '@/components/HomeHero.vue'
-import SetCard from '@/components/SetCard.vue'
-import QueryState from '@/components/QueryState.vue'
-import Heading from '@/components/Heading.vue'
-import TextLink from '@/components/TextLink.vue'
+import { withLoopPadding } from '@/lib/carouselLoop'
+import HomeHero from '@/components/home/HomeHero.vue'
+import SetCard from '@/components/sets/SetCard.vue'
+import QueryState from '@/components/common/QueryState.vue'
+import Heading from '@/components/common/Heading.vue'
+import TextLink from '@/components/common/TextLink.vue'
 
 const { data: sets, isPending: loading, error } = useQuery({
   queryKey: setKeys.list('release_date'),
@@ -40,13 +42,20 @@ const { data: latestArticles } = useQuery({
   queryFn: () => fetchPublishedArticles(4),
 })
 
+const paddedSets = computed(() => withLoopPadding(sets.value ?? []))
+const setsLoop = computed(() => (sets.value?.length ?? 0) > 1)
+
+const paddedArticles = computed(() => withLoopPadding(latestArticles.value ?? []))
+const articlesLoop = computed(() => (latestArticles.value?.length ?? 0) > 1)
+
 const setsCarouselApi = ref<CarouselApi>()
 const setsSelectedIndex = ref(0)
 
 function onSetsInitApi(api: CarouselApi) {
   setsCarouselApi.value = api
   api?.on('select', () => {
-    setsSelectedIndex.value = api.selectedScrollSnap()
+    const realCount = sets.value?.length || 1
+    setsSelectedIndex.value = api.selectedScrollSnap() % realCount
   })
 }
 
@@ -60,7 +69,8 @@ const articlesSelectedIndex = ref(0)
 function onArticlesInitApi(api: CarouselApi) {
   articlesCarouselApi.value = api
   api?.on('select', () => {
-    articlesSelectedIndex.value = api.selectedScrollSnap()
+    const realCount = latestArticles.value?.length || 1
+    articlesSelectedIndex.value = api.selectedScrollSnap() % realCount
   })
 }
 
@@ -74,7 +84,10 @@ function goToArticleSlide(index: number) {
 
   <QueryState :loading="loading" :error="error?.message" :empty="sets?.length === 0" empty-message="Aucun set pour le moment.">
     <div class="rounded-md border border-primary/30 bg-card p-6 sm:p-9">
-      <div v-if="(latestArticles ?? []).length > 0" class="mb-9 border-b border-primary/20 pb-9">
+      <div
+        v-if="(latestArticles ?? []).length > 0"
+        class="animate-in fade-in-0 slide-in-from-bottom-2 duration-500 ease-out"
+      >
         <div class="mb-5 flex items-center justify-between">
           <Heading as="h2" size="lg" class="font-engraved text-foreground">À la une</Heading>
           <TextLink
@@ -87,35 +100,35 @@ function goToArticleSlide(index: number) {
         </div>
 
         <Carousel
-          :opts="{ loop: true, align: 'start' }"
+          :opts="{ loop: articlesLoop, align: 'start' }"
           :plugins="[Autoplay({ delay: 5000, stopOnInteraction: false })]"
           class="w-full"
           @init-api="onArticlesInitApi"
         >
           <CarouselContent class="pt-2">
             <CarouselItem
-              v-for="(article, index) in latestArticles ?? []"
-              :key="article.id"
+              v-for="(slide, slideIndex) in paddedArticles"
+              :key="`${slide.item.id}-${slideIndex}`"
               class="basis-full sm:basis-1/2 lg:basis-1/3"
             >
               <RouterLink
-                :to="{ name: 'article', params: { slug: article.slug } }"
+                :to="{ name: 'article', params: { slug: slide.item.slug } }"
                 class="group block overflow-hidden rounded-md border border-primary/25 bg-secondary transition-shadow hover:shadow-md"
               >
                 <div class="relative aspect-video overflow-hidden bg-gradient-to-br from-secondary to-background">
-                  <Badge v-if="index === 0" class="absolute top-3 right-3 z-10 bg-accent text-accent-foreground">
+                  <Badge v-if="slide.originalIndex === 0" class="absolute top-3 right-3 z-10 bg-accent text-accent-foreground">
                     Nouveau
                   </Badge>
                   <img
-                    v-if="article.cover_image_url"
-                    :src="article.cover_image_url"
-                    :alt="article.title"
+                    v-if="slide.item.cover_image_url"
+                    :src="slide.item.cover_image_url"
+                    :alt="slide.item.title"
                     class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
                 <div class="p-3">
-                  <p class="line-clamp-1 font-medium text-foreground group-hover:underline">{{ article.title }}</p>
-                  <p class="mt-1 line-clamp-2 text-xs text-muted-foreground">{{ article.excerpt }}</p>
+                  <p class="line-clamp-1 font-medium text-foreground group-hover:underline">{{ slide.item.title }}</p>
+                  <p class="mt-1 line-clamp-2 text-xs text-muted-foreground">{{ slide.item.excerpt }}</p>
                 </div>
               </RouterLink>
             </CarouselItem>
@@ -139,23 +152,31 @@ function goToArticleSlide(index: number) {
             </button>
           </div>
         </div>
+
+        <Separator ornament class="mt-9 mb-9" />
       </div>
 
-      <Heading as="h2" size="lg" class="mb-5 font-engraved text-foreground">Sets</Heading>
+      <Heading
+        as="h2"
+        size="lg"
+        class="mb-5 animate-in fade-in-0 slide-in-from-bottom-2 font-engraved text-foreground delay-150 duration-500 ease-out fill-mode-backwards"
+      >
+        Sets
+      </Heading>
 
       <Carousel
-        :opts="{ loop: true, align: 'start' }"
+        :opts="{ loop: setsLoop, align: 'start' }"
         :plugins="[Autoplay({ delay: 5000, stopOnInteraction: false })]"
-        class="w-full"
+        class="w-full animate-in fade-in-0 slide-in-from-bottom-2 delay-150 duration-500 ease-out fill-mode-backwards"
         @init-api="onSetsInitApi"
       >
         <CarouselContent class="pt-2">
           <CarouselItem
-            v-for="set in sets ?? []"
-            :key="set.id"
+            v-for="(slide, slideIndex) in paddedSets"
+            :key="`${slide.item.id}-${slideIndex}`"
             class="basis-full sm:basis-1/2 lg:basis-1/3"
           >
-            <SetCard :set="set" :is-new="set.id === newestSetId" />
+            <SetCard :set="slide.item" :is-new="slide.item.id === newestSetId" />
           </CarouselItem>
         </CarouselContent>
       </Carousel>

@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type { CardSet } from '@/types/card'
 import { Badge } from '@/components/ui/badge'
-import PageIntro from '@/components/PageIntro.vue'
+import PageIntro from '@/components/common/PageIntro.vue'
 
 const props = defineProps<{
   sets: CardSet[]

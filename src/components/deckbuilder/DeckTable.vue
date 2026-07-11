@@ -8,7 +8,7 @@ import { DECK_FORMAT_LABELS } from '@/types/deck'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import QueryState from '@/components/QueryState.vue'
+import QueryState from '@/components/common/QueryState.vue'
 
 const props = defineProps<{
   rows: DeckListItem[]

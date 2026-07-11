@@ -5,12 +5,12 @@ import { createEmptyCardFilters } from '@/types/card'
 import { filterAndSortCards } from '@/lib/filterCards'
 import { useSetBySlug } from '@/composables/useSetBySlug'
 import { cardKeys, fetchCardsBySet } from '@/queries/cards'
-import CardFilters from '@/components/CardFilters.vue'
-import CardTile from '@/components/CardTile.vue'
-import VirtualCardGrid from '@/components/VirtualCardGrid.vue'
-import BackButton from '@/components/BackButton.vue'
-import QueryState from '@/components/QueryState.vue'
-import Heading from '@/components/Heading.vue'
+import CardFilters from '@/components/cards/CardFilters.vue'
+import CardTile from '@/components/cards/CardTile.vue'
+import VirtualCardGrid from '@/components/cards/VirtualCardGrid.vue'
+import BackButton from '@/components/common/BackButton.vue'
+import QueryState from '@/components/common/QueryState.vue'
+import Heading from '@/components/common/Heading.vue'
 
 const props = defineProps<{ setSlug: string }>()
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { StarIcon } from '@lucide/vue'
 import type { Card } from '@/types/card'
-import CardImage from '@/components/CardImage.vue'
+import CardImage from '@/components/cards/CardImage.vue'
 
 const props = defineProps<{
   card: Card

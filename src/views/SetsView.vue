@@ -7,11 +7,11 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/com
 import { fetchSets, setKeys } from '@/queries/sets'
 import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
 import { cardKeys, fetchFeaturedCards } from '@/queries/cards'
-import HomeHero from '@/components/HomeHero.vue'
-import SetCard from '@/components/SetCard.vue'
-import QueryState from '@/components/QueryState.vue'
-import Heading from '@/components/Heading.vue'
-import TextLink from '@/components/TextLink.vue'
+import HomeHero from '@/components/home/HomeHero.vue'
+import SetCard from '@/components/sets/SetCard.vue'
+import QueryState from '@/components/common/QueryState.vue'
+import Heading from '@/components/common/Heading.vue'
+import TextLink from '@/components/common/TextLink.vue'
 
 const { data: sets, isPending: loading, error } = useQuery({
   queryKey: setKeys.list('release_date'),

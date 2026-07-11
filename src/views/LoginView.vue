@@ -7,7 +7,7 @@ import { required } from '@/lib/formValidators'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import FormField from '@/components/FormField.vue'
+import FormField from '@/components/form/FormField.vue'
 
 const route = useRoute()
 const router = useRouter()

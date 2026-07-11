@@ -169,6 +169,7 @@ const saveMutation = useMutation({
   },
   onSuccess: (deckId) => {
     queryClient.invalidateQueries({ queryKey: deckKeys.detail(deckId) })
+    queryClient.invalidateQueries({ queryKey: deckKeys.all })
     toast.success('Deck enregistré.')
     if (!props.deckId) {
       router.replace({ name: 'deck-builder-edit', params: { deckId } })

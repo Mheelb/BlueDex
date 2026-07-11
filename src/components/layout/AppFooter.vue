@@ -1,7 +1,18 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import TextLink from '@/components/common/TextLink.vue'
+import { useAuthUser } from '@/composables/useAuthUser'
+import { supabase } from '@/lib/supabase'
 
 const year = new Date().getFullYear()
+
+const { session } = useAuthUser()
+const router = useRouter()
+
+async function onLogout() {
+  await supabase.auth.signOut()
+  router.push({ name: 'home' })
+}
 </script>
 
 <template>
@@ -27,7 +38,15 @@ const year = new Date().getFullYear()
 
           <div class="flex flex-col gap-2">
             <p class="font-medium text-foreground">Compte</p>
-            <TextLink :to="{ name: 'login' }">
+            <button
+              v-if="session"
+              type="button"
+              class="text-left text-muted-foreground hover:text-foreground"
+              @click="onLogout"
+            >
+              Déconnexion
+            </button>
+            <TextLink v-else :to="{ name: 'login' }">
               Connexion
             </TextLink>
           </div>

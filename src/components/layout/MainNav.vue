@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { HouseIcon } from '@lucide/vue'
 
 const route = useRoute()
+const router = useRouter()
 
 interface NavTab {
   name: string
@@ -44,6 +45,7 @@ function updateIndicator() {
 }
 
 onMounted(async () => {
+  await router.isReady()
   await nextTick()
   updateIndicator()
   window.addEventListener('resize', updateIndicator)
@@ -54,7 +56,7 @@ onUnmounted(() => {
 })
 
 watch(
-  () => route.path,
+  () => [route.path, route.name],
   async () => {
     await nextTick()
     updateIndicator()

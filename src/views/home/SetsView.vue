@@ -74,7 +74,10 @@ function goToArticleSlide(index: number) {
 
   <QueryState :loading="loading" :error="error?.message" :empty="sets?.length === 0" empty-message="Aucun set pour le moment.">
     <div class="rounded-md border border-primary/30 bg-card p-6 sm:p-9">
-      <div v-if="(latestArticles ?? []).length > 0" class="mb-9 border-b border-primary/20 pb-9">
+      <div
+        v-if="(latestArticles ?? []).length > 0"
+        class="mb-9 animate-in fade-in-0 slide-in-from-bottom-2 border-b border-primary/20 pb-9 duration-500 ease-out"
+      >
         <div class="mb-5 flex items-center justify-between">
           <Heading as="h2" size="lg" class="font-engraved text-foreground">À la une</Heading>
           <TextLink
@@ -141,12 +144,18 @@ function goToArticleSlide(index: number) {
         </div>
       </div>
 
-      <Heading as="h2" size="lg" class="mb-5 font-engraved text-foreground">Sets</Heading>
+      <Heading
+        as="h2"
+        size="lg"
+        class="mb-5 animate-in fade-in-0 slide-in-from-bottom-2 font-engraved text-foreground delay-150 duration-500 ease-out fill-mode-backwards"
+      >
+        Sets
+      </Heading>
 
       <Carousel
         :opts="{ loop: true, align: 'start' }"
         :plugins="[Autoplay({ delay: 5000, stopOnInteraction: false })]"
-        class="w-full"
+        class="w-full animate-in fade-in-0 slide-in-from-bottom-2 delay-150 duration-500 ease-out fill-mode-backwards"
         @init-api="onSetsInitApi"
       >
         <CarouselContent class="pt-2">

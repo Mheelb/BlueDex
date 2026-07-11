@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboardIcon, LogOutIcon, MoonIcon, NewspaperIcon, SunIcon } from '@lucide/vue'
+import { HouseIcon, LayoutDashboardIcon, LogOutIcon, MoonIcon, NewspaperIcon, SunIcon } from '@lucide/vue'
 import { useAuthUser } from '@/composables/useAuthUser'
 import { useProfile } from '@/composables/useProfile'
 import { useDarkMode } from '@/composables/useDarkMode'
@@ -34,14 +34,22 @@ async function onLogout() {
 
 const route = useRoute()
 
-const tabs = [
+interface NavTab {
+  name: string
+  label: string
+  matchPrefix?: string
+  icon?: typeof HouseIcon
+}
+
+const tabs: NavTab[] = [
+  { name: 'home', label: 'Accueil', icon: HouseIcon },
   { name: 'sets', label: 'Sets', matchPrefix: '/sets' },
   { name: 'deck-builder', label: 'Deck Builder', matchPrefix: '/decks' },
   { name: 'articles', label: 'Actus', matchPrefix: '/actus' },
 ]
 
-function isTabActive(tab: (typeof tabs)[number]) {
-  return route.path.startsWith(tab.matchPrefix)
+function isTabActive(tab: NavTab) {
+  return tab.matchPrefix ? route.path.startsWith(tab.matchPrefix) : route.name === tab.name
 }
 
 const tabRefs = ref<(HTMLElement | null)[]>([])
@@ -97,10 +105,15 @@ watch(
         <div v-for="(tab, index) in tabs" :key="tab.name" :ref="(el) => setTabRef(el as Element | null, index)" class="relative z-10">
           <RouterLink
             :to="{ name: tab.name }"
-            class="block rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
-            :class="isTabActive(tab) ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+            class="flex items-center justify-center rounded-full text-sm font-medium transition-colors"
+            :class="[
+              tab.icon ? 'size-8' : 'px-4 py-1.5',
+              isTabActive(tab) ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+            ]"
           >
-            {{ tab.label }}
+            <component :is="tab.icon" v-if="tab.icon" class="size-4" />
+            <span v-else>{{ tab.label }}</span>
+            <span v-if="tab.icon" class="sr-only">{{ tab.label }}</span>
           </RouterLink>
         </div>
       </nav>

@@ -15,10 +15,10 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
-import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue'
-import FormField from '@/components/FormField.vue'
-import PageHeader from '@/components/PageHeader.vue'
-import QueryState from '@/components/QueryState.vue'
+import ConfirmDeleteDialog from '@/components/common/ConfirmDeleteDialog.vue'
+import FormField from '@/components/form/FormField.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import QueryState from '@/components/common/QueryState.vue'
 
 const queryClient = useQueryClient()
 

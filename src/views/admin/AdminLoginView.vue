@@ -26,7 +26,7 @@ const signInMutation = useMutation({
   },
   onSuccess: () => {
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : undefined
-    router.push(redirect ?? { name: 'home' })
+    router.push(redirect ?? { name: 'admin-sets' })
   },
 })
 
@@ -41,7 +41,7 @@ const form = useForm({
 <template>
   <Card class="mx-auto w-full max-w-sm">
     <CardHeader>
-      <CardTitle class="text-xl">Connexion</CardTitle>
+      <CardTitle class="text-xl">Connexion admin</CardTitle>
     </CardHeader>
     <CardContent>
       <form class="flex flex-col gap-4" @submit.prevent="() => form.handleSubmit()">
@@ -76,10 +76,6 @@ const form = useForm({
         <Button type="submit" :disabled="signInMutation.isPending.value">
           {{ signInMutation.isPending.value ? 'Connexion...' : 'Se connecter' }}
         </Button>
-
-        <RouterLink :to="{ name: 'signup' }" class="text-center text-sm text-muted-foreground hover:text-foreground">
-          Pas encore de compte ? S'inscrire
-        </RouterLink>
       </form>
     </CardContent>
   </Card>

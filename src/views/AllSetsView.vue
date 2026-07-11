@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query'
 import { fetchSets, setKeys } from '@/queries/sets'
-import SetsHero from '@/components/SetsHero.vue'
-import SetCard from '@/components/SetCard.vue'
-import QueryState from '@/components/QueryState.vue'
+import SetsHero from '@/components/sets/SetsHero.vue'
+import SetCard from '@/components/sets/SetCard.vue'
+import QueryState from '@/components/common/QueryState.vue'
 
 const { data: sets, isPending: loading, error } = useQuery({
   queryKey: setKeys.list('release_date'),

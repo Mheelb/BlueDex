@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Heading from '@/components/Heading.vue'
+import Heading from '@/components/common/Heading.vue'
 
 defineProps<{
   eyebrow: string

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import MainNav from '@/components/MainNav.vue'
-import UserMenu from '@/components/UserMenu.vue'
+import MainNav from '@/components/layout/MainNav.vue'
+import UserMenu from '@/components/layout/UserMenu.vue'
 </script>
 
 <template>

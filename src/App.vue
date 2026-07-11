@@ -2,9 +2,9 @@
 import { defineAsyncComponent } from 'vue'
 import 'vue-sonner/style.css'
 import { Toaster } from 'vue-sonner'
-import AppHeader from '@/components/AppHeader.vue'
-import AppFooter from '@/components/AppFooter.vue'
-import PageContainer from '@/components/PageContainer.vue'
+import AppHeader from '@/components/layout/AppHeader.vue'
+import AppFooter from '@/components/layout/AppFooter.vue'
+import PageContainer from '@/components/layout/PageContainer.vue'
 
 const VueQueryDevtools = import.meta.env.DEV
   ? defineAsyncComponent(() => import('@tanstack/vue-query-devtools').then((m) => m.VueQueryDevtools))

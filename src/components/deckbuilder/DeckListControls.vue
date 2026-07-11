@@ -2,9 +2,9 @@
 import { computed } from 'vue'
 import type { DeckListQuery } from '@/types/deck'
 import { DECK_FORMATS, DECK_FORMAT_LABELS, DECK_SORTS, DECK_SORT_LABELS } from '@/types/deck'
-import SearchInput from '@/components/SearchInput.vue'
-import SelectField from '@/components/SelectField.vue'
-import type { SelectFieldOption } from '@/components/SelectField.vue'
+import SearchInput from '@/components/form/SearchInput.vue'
+import SelectField from '@/components/form/SelectField.vue'
+import type { SelectFieldOption } from '@/components/form/SelectField.vue'
 import { Card, CardContent } from '@/components/ui/card'
 
 const props = defineProps<{

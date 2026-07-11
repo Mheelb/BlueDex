@@ -4,6 +4,7 @@ import Autoplay from 'embla-carousel-autoplay'
 import { useQuery } from '@tanstack/vue-query'
 import { Badge } from '@/components/ui/badge'
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from '@/components/ui/carousel'
+import { Separator } from '@/components/ui/separator'
 import { fetchSets, setKeys } from '@/queries/sets'
 import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
 import { cardKeys, fetchFeaturedCards } from '@/queries/cards'
@@ -85,7 +86,7 @@ function goToArticleSlide(index: number) {
     <div class="rounded-md border border-primary/30 bg-card p-6 sm:p-9">
       <div
         v-if="(latestArticles ?? []).length > 0"
-        class="mb-9 animate-in fade-in-0 slide-in-from-bottom-2 border-b border-primary/20 pb-9 duration-500 ease-out"
+        class="animate-in fade-in-0 slide-in-from-bottom-2 duration-500 ease-out"
       >
         <div class="mb-5 flex items-center justify-between">
           <Heading as="h2" size="lg" class="font-engraved text-foreground">À la une</Heading>
@@ -151,6 +152,8 @@ function goToArticleSlide(index: number) {
             </button>
           </div>
         </div>
+
+        <Separator ornament class="mt-9 mb-9" />
       </div>
 
       <Heading

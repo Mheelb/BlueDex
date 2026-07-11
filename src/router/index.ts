@@ -79,6 +79,11 @@ const router = createRouter({
       name: 'admin-articles',
       component: () => import('@/views/admin/AdminArticlesView.vue'),
     },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('@/views/NotFoundView.vue'),
+    },
   ],
 })
 

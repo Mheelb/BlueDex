@@ -19,6 +19,7 @@ import ConfirmDeleteDialog from '@/components/common/ConfirmDeleteDialog.vue'
 import FormField from '@/components/form/FormField.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import QueryState from '@/components/common/QueryState.vue'
+import RebuildSiteButton from '@/components/admin/RebuildSiteButton.vue'
 
 const queryClient = useQueryClient()
 
@@ -155,6 +156,7 @@ async function onMigrateImages() {
 <template>
   <PageHeader title="Admin · Sets">
     <div class="flex gap-2">
+      <RebuildSiteButton />
       <ConfirmDeleteDialog
         title="Optimiser toutes les images ?"
         description="Recompresse les images de cartes en WebP directement dans Supabase. Les fichiers d'origine seront supprimés du bucket une fois remplacés. Ça peut prendre plusieurs minutes selon le nombre de cartes."

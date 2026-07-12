@@ -1,10 +1,27 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
+import { useHead } from '@unhead/vue'
 import 'vue-sonner/style.css'
 import { Toaster } from 'vue-sonner'
+import { DEFAULT_DESCRIPTION, DEFAULT_OG_IMAGE, SITE_NAME } from '@/lib/seo'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppFooter from '@/components/layout/AppFooter.vue'
 import PageContainer from '@/components/layout/PageContainer.vue'
+
+// Valeurs SEO par défaut, surchargées page par page via usePageSeo().
+useHead({
+  htmlAttrs: { lang: 'fr' },
+  titleTemplate: (title) => (title ? `${title} · ${SITE_NAME}` : SITE_NAME),
+  meta: [
+    { name: 'description', content: DEFAULT_DESCRIPTION },
+    { property: 'og:site_name', content: SITE_NAME },
+    { property: 'og:type', content: 'website' },
+    { property: 'og:image', content: DEFAULT_OG_IMAGE },
+    { property: 'og:locale', content: 'fr_FR' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:image', content: DEFAULT_OG_IMAGE },
+  ],
+})
 
 const VueQueryDevtools = import.meta.env.DEV
   ? defineAsyncComponent(() => import('@tanstack/vue-query-devtools').then((m) => m.VueQueryDevtools))

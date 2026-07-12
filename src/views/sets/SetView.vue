@@ -5,6 +5,7 @@ import { createEmptyCardFilters } from '@/types/card'
 import { filterAndSortCards } from '@/lib/filterCards'
 import { useSetBySlug } from '@/composables/useSetBySlug'
 import { cardKeys, fetchCardsBySet } from '@/queries/cards'
+import { usePageSeo } from '@/lib/seo'
 import CardFilters from '@/components/cards/CardFilters.vue'
 import CardTile from '@/components/cards/CardTile.vue'
 import VirtualCardGrid from '@/components/cards/VirtualCardGrid.vue'
@@ -39,6 +40,14 @@ watch(
 )
 
 const filteredCards = computed(() => filterAndSortCards(cards.value ?? [], filters.value))
+
+usePageSeo({
+  title: () => set.value?.name,
+  description: () =>
+    set.value ? `Toutes les cartes du set ${set.value.name} de Blue Rising : liste, filtres et détails.` : undefined,
+  path: () => `/sets/${props.setSlug}`,
+  image: () => set.value?.symbol_url ?? undefined,
+})
 </script>
 
 <template>

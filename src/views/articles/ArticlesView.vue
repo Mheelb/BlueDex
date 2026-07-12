@@ -2,9 +2,16 @@
 import { NewspaperIcon } from '@lucide/vue'
 import { useQuery } from '@tanstack/vue-query'
 import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
+import { usePageSeo } from '@/lib/seo'
 import QueryState from '@/components/common/QueryState.vue'
 import Heading from '@/components/common/Heading.vue'
 import PageIntro from '@/components/common/PageIntro.vue'
+
+usePageSeo({
+  title: 'Actus',
+  description: 'Cartes, factions, decks : les derniers articles et actualités autour de Blue Rising.',
+  path: '/actus',
+})
 
 const {
   data: articles,

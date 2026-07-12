@@ -20,19 +20,17 @@ export async function fetchCardsBySet(setId: string, orderByNumber = false): Pro
 }
 
 export async function fetchCardByNumber(setId: string, number: string): Promise<Card> {
-  const { data, error } = await supabase
-    .from('cards')
-    .select('*')
-    .eq('set_id', setId)
-    .eq('number', number)
-    .single()
+  const { data, error } = await supabase.from('cards').select('*').eq('set_id', setId).eq('number', number).single()
 
   if (error || !data) throw new Error(error?.message ?? 'Carte introuvable.')
   return data as Card
 }
 
 export async function fetchAllCardsWithSet(): Promise<CardWithSet[]> {
-  const { data, error } = await supabase.from('cards').select('*, set:sets(name, slug)').order('name', { ascending: true })
+  const { data, error } = await supabase
+    .from('cards')
+    .select('*, set:sets(name, slug)')
+    .order('name', { ascending: true })
   if (error) throw new Error(error.message)
   return data as unknown as CardWithSet[]
 }

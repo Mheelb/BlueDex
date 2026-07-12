@@ -8,13 +8,16 @@ const variants = {
   primary: 'text-sm text-primary hover:underline',
 } as const
 
-const props = withDefaults(defineProps<{
-  to: RouteLocationRaw
-  variant?: keyof typeof variants
-  class?: HTMLAttributes['class']
-}>(), {
-  variant: 'muted',
-})
+const props = withDefaults(
+  defineProps<{
+    to: RouteLocationRaw
+    variant?: keyof typeof variants
+    class?: HTMLAttributes['class']
+  }>(),
+  {
+    variant: 'muted',
+  },
+)
 </script>
 
 <template>

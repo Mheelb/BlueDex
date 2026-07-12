@@ -72,7 +72,12 @@ watch(
       class="absolute inset-y-1 left-0 rounded-full bg-primary transition-all duration-300 ease-out"
       :style="indicatorStyle"
     />
-    <div v-for="(tab, index) in tabs" :key="tab.name" :ref="(el) => setTabRef(el as Element | null, index)" class="relative z-10">
+    <div
+      v-for="(tab, index) in tabs"
+      :key="tab.name"
+      :ref="(el) => setTabRef(el as Element | null, index)"
+      class="relative z-10"
+    >
       <RouterLink
         :to="{ name: tab.name }"
         class="flex items-center justify-center rounded-full text-sm font-medium transition-colors"

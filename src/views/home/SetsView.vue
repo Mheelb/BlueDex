@@ -15,7 +15,11 @@ import QueryState from '@/components/common/QueryState.vue'
 import Heading from '@/components/common/Heading.vue'
 import TextLink from '@/components/common/TextLink.vue'
 
-const { data: sets, isPending: loading, error } = useQuery({
+const {
+  data: sets,
+  isPending: loading,
+  error,
+} = useQuery({
   queryKey: setKeys.list('release_date'),
   queryFn: () => fetchSets('release_date'),
 })
@@ -82,7 +86,12 @@ function goToArticleSlide(index: number) {
 <template>
   <HomeHero :featured-cards="featuredCards ?? []" :featured-set-slug="featuredSetSlug" :total-cards="totalCards" />
 
-  <QueryState :loading="loading" :error="error?.message" :empty="sets?.length === 0" empty-message="Aucun set pour le moment.">
+  <QueryState
+    :loading="loading"
+    :error="error?.message"
+    :empty="sets?.length === 0"
+    empty-message="Aucun set pour le moment."
+  >
     <div class="rounded-md border border-primary/30 bg-card p-6 sm:p-9">
       <div
         v-if="(latestArticles ?? []).length > 0"
@@ -116,7 +125,10 @@ function goToArticleSlide(index: number) {
                 class="group block overflow-hidden rounded-md border border-primary/25 bg-secondary transition-shadow hover:shadow-md"
               >
                 <div class="relative aspect-video overflow-hidden bg-gradient-to-br from-secondary to-background">
-                  <Badge v-if="slide.originalIndex === 0" class="absolute top-3 right-3 z-10 bg-accent text-accent-foreground">
+                  <Badge
+                    v-if="slide.originalIndex === 0"
+                    class="absolute top-3 right-3 z-10 bg-accent text-accent-foreground"
+                  >
                     Nouveau
                   </Badge>
                   <img

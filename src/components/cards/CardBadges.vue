@@ -9,10 +9,7 @@ defineProps<{ card: Card }>()
 <template>
   <div class="flex flex-wrap gap-2">
     <Badge class="bg-primary text-primary-foreground">{{ card.rarity }}</Badge>
-    <Badge
-      v-if="card.type"
-      :style="{ backgroundColor: TYPE_COLORS[card.type].bg, color: TYPE_COLORS[card.type].text }"
-    >
+    <Badge v-if="card.type" :style="{ backgroundColor: TYPE_COLORS[card.type].bg, color: TYPE_COLORS[card.type].text }">
       {{ card.type }}
     </Badge>
     <Badge v-if="card.subtype" variant="secondary">{{ card.subtype }}</Badge>

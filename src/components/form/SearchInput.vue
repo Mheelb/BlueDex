@@ -5,23 +5,23 @@ import { Debouncer } from '@tanstack/pacer'
 import { SearchIcon } from '@lucide/vue'
 import Input from '@/components/ui/input/Input.vue'
 
-const props = withDefaults(defineProps<{
-  modelValue?: string
-  placeholder?: string
-  class?: HTMLAttributes['class']
-  debounceMs?: number
-}>(), {
-  debounceMs: 300,
-})
+const props = withDefaults(
+  defineProps<{
+    modelValue?: string
+    placeholder?: string
+    class?: HTMLAttributes['class']
+    debounceMs?: number
+  }>(),
+  {
+    debounceMs: 300,
+  },
+)
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-const debouncer = new Debouncer(
-  (value: string) => emit('update:modelValue', value),
-  { wait: props.debounceMs },
-)
+const debouncer = new Debouncer((value: string) => emit('update:modelValue', value), { wait: props.debounceMs })
 
 onUnmounted(() => debouncer.cancel())
 </script>

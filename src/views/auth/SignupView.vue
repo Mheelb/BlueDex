@@ -84,7 +84,7 @@ const form = useForm({
     </CardHeader>
     <CardContent>
       <form class="flex flex-col gap-4" @submit.prevent="() => form.handleSubmit()">
-        <form.Field name="displayName" :validators="{ onChange: required('Pseudo requis.') }" v-slot="{ field }">
+        <form.Field v-slot="{ field }" name="displayName" :validators="{ onChange: required('Pseudo requis.') }">
           <FormField label="Pseudo" for="display-name" required :error="field.state.meta.errors[0]">
             <Input
               id="display-name"
@@ -96,7 +96,7 @@ const form = useForm({
           </FormField>
         </form.Field>
 
-        <form.Field name="email" :validators="{ onChange: required('Email requis.') }" v-slot="{ field }">
+        <form.Field v-slot="{ field }" name="email" :validators="{ onChange: required('Email requis.') }">
           <FormField label="Email" for="email" required :error="field.state.meta.errors[0]">
             <Input
               id="email"
@@ -109,7 +109,7 @@ const form = useForm({
           </FormField>
         </form.Field>
 
-        <form.Field name="password" :validators="{ onChange: required('Mot de passe requis.') }" v-slot="{ field }">
+        <form.Field v-slot="{ field }" name="password" :validators="{ onChange: required('Mot de passe requis.') }">
           <FormField label="Mot de passe" for="password" required :error="field.state.meta.errors[0]">
             <Input
               id="password"
@@ -124,9 +124,9 @@ const form = useForm({
         </form.Field>
 
         <FormField label="Avatar (optionnel)">
-          <input ref="fileInputEl" type="file" accept="image/*" class="hidden" @change="onFileChange">
+          <input ref="fileInputEl" type="file" accept="image/*" class="hidden" @change="onFileChange" />
           <div class="flex items-center gap-3">
-            <img v-if="avatarPreview" :src="avatarPreview" alt="" class="size-10 rounded-full object-cover">
+            <img v-if="avatarPreview" :src="avatarPreview" alt="" class="size-10 rounded-full object-cover" />
             <Button type="button" variant="outline" size="sm" :disabled="converting" @click="triggerFileInput">
               <UploadIcon />
               Importer
@@ -137,7 +137,9 @@ const form = useForm({
           </div>
         </FormField>
 
-        <p v-if="signUpMutation.error.value" class="text-sm text-destructive">{{ signUpMutation.error.value.message }}</p>
+        <p v-if="signUpMutation.error.value" class="text-sm text-destructive">
+          {{ signUpMutation.error.value.message }}
+        </p>
 
         <Button type="submit" :disabled="signUpMutation.isPending.value">
           {{ signUpMutation.isPending.value ? 'Création...' : 'Créer mon compte' }}

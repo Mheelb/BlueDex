@@ -6,9 +6,7 @@ import { Button } from '@/components/ui/button'
   <div class="flex flex-col items-center rounded-md border border-primary/30 bg-card px-6 py-20 text-center">
     <p class="font-engraved text-xs font-bold tracking-[0.22em] text-primary uppercase">TCG · Blue Rising</p>
     <h1 class="mt-4 font-blackletter text-7xl leading-none text-foreground sm:text-8xl">404</h1>
-    <p class="mt-5 max-w-md text-muted-foreground">
-      Cette page n'existe pas, ou plus.
-    </p>
+    <p class="mt-5 max-w-md text-muted-foreground">Cette page n'existe pas, ou plus.</p>
     <Button
       as-child
       size="lg"

@@ -60,8 +60,8 @@ onUpdated(measureRows)
       <div
         v-for="virtualRow in virtualRows"
         :key="String(virtualRow.key)"
-        :data-index="virtualRow.index"
         ref="rowEls"
+        :data-index="virtualRow.index"
         class="grid grid-cols-2 gap-x-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"
         :class="virtualRow.index < cardRows.length - 1 ? 'pb-8' : ''"
       >

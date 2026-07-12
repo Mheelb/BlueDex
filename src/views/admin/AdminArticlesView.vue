@@ -210,9 +210,9 @@ function onDelete(article: Article) {
       </SheetHeader>
       <Separator />
 
-      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="() => form.handleSubmit()" novalidate>
+      <form class="flex flex-1 flex-col overflow-y-auto" novalidate @submit.prevent="() => form.handleSubmit()">
         <div class="grid grid-cols-1 gap-3 p-4">
-          <form.Field name="title" :validators="{ onChange: required('Le titre est requis.') }" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="title" :validators="{ onChange: required('Le titre est requis.') }">
             <FormField label="Titre" for="article-title" required :error="field.state.meta.errors[0]">
               <Input
                 id="article-title"
@@ -223,7 +223,7 @@ function onDelete(article: Article) {
               />
             </FormField>
           </form.Field>
-          <form.Field name="slug" :validators="{ onChange: required('Le slug est requis.') }" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="slug" :validators="{ onChange: required('Le slug est requis.') }">
             <FormField label="Slug" for="article-slug" required :error="field.state.meta.errors[0]">
               <Input
                 id="article-slug"
@@ -234,7 +234,7 @@ function onDelete(article: Article) {
               />
             </FormField>
           </form.Field>
-          <form.Field name="excerpt" :validators="{ onChange: validateExcerpt }" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="excerpt" :validators="{ onChange: validateExcerpt }">
             <FormField label="Extrait" for="article-excerpt" required :error="field.state.meta.errors[0]">
               <Textarea
                 id="article-excerpt"
@@ -246,7 +246,7 @@ function onDelete(article: Article) {
               />
             </FormField>
           </form.Field>
-          <form.Field name="cover_image_url" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="cover_image_url">
             <FormField label="URL de l'image de couverture" for="article-cover">
               <Input
                 id="article-cover"
@@ -256,7 +256,7 @@ function onDelete(article: Article) {
               />
             </FormField>
           </form.Field>
-          <form.Field name="content" :validators="{ onChange: required('Le contenu est requis.') }" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="content" :validators="{ onChange: required('Le contenu est requis.') }">
             <FormField label="Contenu (markdown)" for="article-content" required :error="field.state.meta.errors[0]">
               <Textarea
                 id="article-content"

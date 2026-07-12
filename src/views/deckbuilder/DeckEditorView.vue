@@ -45,7 +45,11 @@ const error = ref<string | null>(null)
 
 const formatOptions: SelectFieldOption[] = DECK_FORMATS.map((f) => ({ value: f, label: DECK_FORMAT_LABELS[f] }))
 
-const { data: existingDeck, isPending: deckLoading, error: deckError } = useQuery({
+const {
+  data: existingDeck,
+  isPending: deckLoading,
+  error: deckError,
+} = useQuery({
   queryKey: computed(() => deckKeys.detail(props.deckId ?? '')),
   queryFn: () => fetchDeckWithCards(props.deckId!),
   enabled: computed(() => !!props.deckId),
@@ -67,10 +71,14 @@ watch(
 // La carte de couverture doit toujours faire partie du deck : si elle en est
 // retirée (ou si aucune n'a encore été choisie), on retombe sur la première
 // carte restante plutôt que de laisser une vignette vide.
-watch(entries, (value) => {
-  if (value.some((e) => e.card.id === coverCardId.value)) return
-  coverCardId.value = value[0]?.card.id ?? null
-}, { deep: true })
+watch(
+  entries,
+  (value) => {
+    if (value.some((e) => e.card.id === coverCardId.value)) return
+    coverCardId.value = value[0]?.card.id ?? null
+  },
+  { deep: true },
+)
 
 function setCover(cardId: string) {
   if (readOnly.value) return
@@ -163,7 +171,8 @@ const saveMutation = useMutation({
     if (!session.value?.user.id) throw new Error('Session expirée, reconnecte-toi.')
     const name = deckName.value.trim()
     if (!name) throw new Error('Le nom du deck est requis.')
-    if (!isDeckLegal(entries.value, format.value)) throw new Error('Le deck ne respecte pas les règles du format choisi.')
+    if (!isDeckLegal(entries.value, format.value))
+      throw new Error('Le deck ne respecte pas les règles du format choisi.')
 
     return saveDeck(props.deckId ?? null, name, format.value, isPublic.value, coverCardId.value, entries.value)
   },
@@ -212,7 +221,8 @@ function onExport() {
 
   <QueryState :loading="isEditing && deckLoading" :error="deckError?.message ?? null">
     <p v-if="readOnly" class="mb-4 text-sm text-muted-foreground">
-      Deck public en lecture seule — seul son propriétaire peut le modifier. Duplique-le pour en créer ta propre version.
+      Deck public en lecture seule — seul son propriétaire peut le modifier. Duplique-le pour en créer ta propre
+      version.
     </p>
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
@@ -242,11 +252,7 @@ function onExport() {
         <Input v-model="deckName" placeholder="Nom du deck" :disabled="readOnly" />
         <SelectField v-model="format" :options="formatOptions" :disabled="readOnly" />
         <label class="flex items-center gap-2 text-sm">
-          <Checkbox
-            :model-value="isPublic"
-            :disabled="readOnly"
-            @update:model-value="(v) => (isPublic = !!v)"
-          />
+          <Checkbox :model-value="isPublic" :disabled="readOnly" @update:model-value="(v) => (isPublic = !!v)" />
           public
           <span class="text-xs text-muted-foreground">— visible et duplicable par les autres joueurs</span>
         </label>

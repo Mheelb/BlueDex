@@ -12,7 +12,4 @@ import App from './App.vue'
 import router from './router'
 import { queryClient } from './lib/queryClient'
 
-createApp(App)
-  .use(router)
-  .use(VueQueryPlugin, { queryClient })
-  .mount('#app')
+createApp(App).use(router).use(VueQueryPlugin, { queryClient }).mount('#app')

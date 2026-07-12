@@ -36,7 +36,11 @@ const queryClient = useQueryClient()
 const { data: set, isPending: setLoading, error: setError } = useSetBySlug(() => props.setSlug)
 
 const setId = computed(() => set.value?.id)
-const { data: cards, isPending: cardsLoading, error: cardsError } = useQuery({
+const {
+  data: cards,
+  isPending: cardsLoading,
+  error: cardsError,
+} = useQuery({
   queryKey: computed(() => cardKeys.bySet(setId.value ?? '')),
   queryFn: () => fetchCardsBySet(setId.value!, true),
   enabled: computed(() => !!setId.value),
@@ -175,8 +179,7 @@ function openDuplicateSheet(card: Card) {
 
 const validateRarity = ({ value }: { value: string }) => (value ? undefined : 'La rareté est requise.')
 
-function validateNumberedTotal({ value, fieldApi }: { value: string | number; fieldApi: { form: { getFieldValue: (name: string) => unknown } } }) {
-  if (!fieldApi.form.getFieldValue('is_numbered')) return undefined
+function validateNumberedTotal({ value }: { value: string | number }) {
   if (value === '' || Number.isNaN(Number(value)) || Number(value) <= 0) {
     return "Le nombre d'exemplaires doit être un nombre positif."
   }
@@ -286,17 +289,17 @@ function onDelete(card: Card) {
       <div class="flex flex-col gap-2">
         <UiCard v-for="card in filteredCards" :key="card.id">
           <CardContent class="flex items-center gap-4">
-            <img
-              v-if="card.image_url"
-              :src="card.image_url"
-              :alt="card.name"
-              class="h-16 w-12 rounded object-cover"
-            />
-            <div v-else class="flex h-16 w-12 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground">
+            <img v-if="card.image_url" :src="card.image_url" :alt="card.name" class="h-16 w-12 rounded object-cover" />
+            <div
+              v-else
+              class="flex h-16 w-12 items-center justify-center rounded bg-muted text-[10px] text-muted-foreground"
+            >
               N/A
             </div>
             <div class="flex-1">
-              <p class="font-medium">{{ card.name }} <span class="text-muted-foreground">#{{ card.number }}</span></p>
+              <p class="font-medium">
+                {{ card.name }} <span class="text-muted-foreground">#{{ card.number }}</span>
+              </p>
               <p class="text-xs text-muted-foreground">{{ card.rarity }}<span v-if="card.is_holo"> · Holo</span></p>
             </div>
             <div class="flex items-center gap-1">
@@ -329,9 +332,9 @@ function onDelete(card: Card) {
       </SheetHeader>
       <Separator />
 
-      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="() => form.handleSubmit()" novalidate>
+      <form class="flex flex-1 flex-col overflow-y-auto" novalidate @submit.prevent="() => form.handleSubmit()">
         <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
-          <form.Field name="number" :validators="{ onChange: required('Le numéro est requis.') }" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="number" :validators="{ onChange: required('Le numéro est requis.') }">
             <FormField label="Numéro" for="card-number" required :error="field.state.meta.errors[0]">
               <Input
                 id="card-number"
@@ -342,7 +345,7 @@ function onDelete(card: Card) {
               />
             </FormField>
           </form.Field>
-          <form.Field name="name" :validators="{ onChange: required('Le nom est requis.') }" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="name" :validators="{ onChange: required('Le nom est requis.') }">
             <FormField label="Nom" for="card-name" required :error="field.state.meta.errors[0]" class="sm:col-span-2">
               <Input
                 id="card-name"
@@ -354,7 +357,7 @@ function onDelete(card: Card) {
             </FormField>
           </form.Field>
 
-          <form.Field name="rarity" :validators="{ onChange: validateRarity }" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="rarity" :validators="{ onChange: validateRarity }">
             <FormField label="Rareté" required :error="field.state.meta.errors[0]" class="sm:col-span-3">
               <SelectField
                 :model-value="field.state.value"
@@ -365,7 +368,7 @@ function onDelete(card: Card) {
               />
             </FormField>
           </form.Field>
-          <form.Field name="type" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="type">
             <FormField label="Type" class="sm:col-span-3">
               <SelectField
                 :model-value="field.state.value"
@@ -375,7 +378,7 @@ function onDelete(card: Card) {
               />
             </FormField>
           </form.Field>
-          <form.Field name="subtype" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="subtype">
             <FormField label="Sous-type" class="sm:col-span-3">
               <SelectField
                 :model-value="field.state.value"
@@ -385,7 +388,7 @@ function onDelete(card: Card) {
               />
             </FormField>
           </form.Field>
-          <form.Field name="faction" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="faction">
             <FormField label="Faction" class="sm:col-span-3">
               <SelectField
                 :model-value="field.state.value"
@@ -396,7 +399,11 @@ function onDelete(card: Card) {
             </FormField>
           </form.Field>
 
-          <form.Field name="cost" :validators="{ onChange: optionalNonNegativeNumber('Le coût doit être un nombre positif.') }" v-slot="{ field }">
+          <form.Field
+            v-slot="{ field }"
+            name="cost"
+            :validators="{ onChange: optionalNonNegativeNumber('Le coût doit être un nombre positif.') }"
+          >
             <FormField label="Coût" for="card-cost" :error="field.state.meta.errors[0]">
               <Input
                 id="card-cost"
@@ -409,7 +416,11 @@ function onDelete(card: Card) {
               />
             </FormField>
           </form.Field>
-          <form.Field name="power" :validators="{ onChange: optionalNonNegativeNumber('La puissance doit être un nombre positif.') }" v-slot="{ field }">
+          <form.Field
+            v-slot="{ field }"
+            name="power"
+            :validators="{ onChange: optionalNonNegativeNumber('La puissance doit être un nombre positif.') }"
+          >
             <FormField label="Puissance" for="card-power" :error="field.state.meta.errors[0]">
               <Input
                 id="card-power"
@@ -422,7 +433,11 @@ function onDelete(card: Card) {
               />
             </FormField>
           </form.Field>
-          <form.Field name="support" :validators="{ onChange: optionalNonNegativeNumber('Le soutien doit être un nombre positif.') }" v-slot="{ field }">
+          <form.Field
+            v-slot="{ field }"
+            name="support"
+            :validators="{ onChange: optionalNonNegativeNumber('Le soutien doit être un nombre positif.') }"
+          >
             <FormField label="Soutien" for="card-support" :error="field.state.meta.errors[0]">
               <Input
                 id="card-support"
@@ -436,7 +451,7 @@ function onDelete(card: Card) {
             </FormField>
           </form.Field>
 
-          <form.Field name="effect" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="effect">
             <FormField label="Effet de la carte" for="card-effect" class="sm:col-span-3">
               <Textarea
                 id="card-effect"
@@ -447,7 +462,7 @@ function onDelete(card: Card) {
             </FormField>
           </form.Field>
 
-          <form.Field name="artist" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="artist">
             <FormField label="Artiste (illustration)" for="card-artist" class="sm:col-span-3">
               <Input
                 id="card-artist"
@@ -458,15 +473,15 @@ function onDelete(card: Card) {
             </FormField>
           </form.Field>
 
-          <form.Field name="is_numbered" v-slot="{ field: isNumberedField }">
+          <form.Field v-slot="{ field: isNumberedField }" name="is_numbered">
             <div class="flex flex-wrap items-center gap-4 sm:col-span-3">
-              <form.Field name="is_holo" v-slot="{ field }">
+              <form.Field v-slot="{ field }" name="is_holo">
                 <label class="flex items-center gap-2 text-sm">
                   <Checkbox :model-value="field.state.value" @update:model-value="(v) => field.handleChange(!!v)" />
                   Effet holographique
                 </label>
               </form.Field>
-              <form.Field name="is_signed" v-slot="{ field }">
+              <form.Field v-slot="{ field }" name="is_signed">
                 <label class="flex items-center gap-2 text-sm">
                   <Checkbox :model-value="field.state.value" @update:model-value="(v) => field.handleChange(!!v)" />
                   Signature
@@ -479,13 +494,13 @@ function onDelete(card: Card) {
                 />
                 Numéroté
               </label>
-              <form.Field name="is_full_art" v-slot="{ field }">
+              <form.Field v-slot="{ field }" name="is_full_art">
                 <label class="flex items-center gap-2 text-sm">
                   <Checkbox :model-value="field.state.value" @update:model-value="(v) => field.handleChange(!!v)" />
                   Full art
                 </label>
               </form.Field>
-              <form.Field name="is_overframe" v-slot="{ field }">
+              <form.Field v-slot="{ field }" name="is_overframe">
                 <label class="flex items-center gap-2 text-sm">
                   <Checkbox :model-value="field.state.value" @update:model-value="(v) => field.handleChange(!!v)" />
                   Overframe
@@ -495,9 +510,9 @@ function onDelete(card: Card) {
 
             <form.Field
               v-if="isNumberedField.state.value"
-              name="numbered_total"
-              :validators="{ onChange: validateNumberedTotal, onChangeListenTo: ['is_numbered'] }"
               v-slot="{ field }"
+              name="numbered_total"
+              :validators="{ onChange: validateNumberedTotal }"
             >
               <FormField
                 label="Nombre d'exemplaires"
@@ -530,7 +545,7 @@ function onDelete(card: Card) {
                 Importer
               </Button>
               <span class="truncate text-sm text-muted-foreground">
-                {{ converting ? 'Compression...' : imageFile?.name ?? 'Aucun fichier sélectionné' }}
+                {{ converting ? 'Compression...' : (imageFile?.name ?? 'Aucun fichier sélectionné') }}
               </span>
             </div>
           </FormField>
@@ -541,7 +556,13 @@ function onDelete(card: Card) {
           <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
           <div class="flex gap-3">
             <Button type="submit" :disabled="saveMutation.isPending.value || converting">
-              {{ saveMutation.isPending.value ? 'Enregistrement...' : editingId ? 'Mettre à jour la carte' : 'Ajouter la carte' }}
+              {{
+                saveMutation.isPending.value
+                  ? 'Enregistrement...'
+                  : editingId
+                    ? 'Mettre à jour la carte'
+                    : 'Ajouter la carte'
+              }}
             </Button>
             <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
           </div>

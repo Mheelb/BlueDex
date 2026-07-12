@@ -19,9 +19,7 @@ function formatDate(date: string | null) {
     <div
       class="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-2xl border bg-gradient-to-br from-primary to-primary/70 shadow-sm transition-all duration-300 group-hover:-translate-y-1.5 group-hover:shadow-xl"
     >
-      <Badge v-if="isNew" class="absolute top-3 right-3 z-10 bg-white text-primary">
-        Nouveau
-      </Badge>
+      <Badge v-if="isNew" class="absolute top-3 right-3 z-10 bg-white text-primary"> Nouveau </Badge>
 
       <img
         v-if="set.logo_url || set.symbol_url"

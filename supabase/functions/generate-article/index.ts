@@ -17,12 +17,12 @@ const CORS_HEADERS = {
 
 const TOPIC_ANGLES = [
   'un coup de projecteur sur une carte précise (mécanique, synergies, dans quel deck la jouer)',
-  'une présentation d\'une des quatre factions (Émissaire, Veilleur, Gardien, Éclaireur) et de son identité de jeu',
+  "une présentation d'une des quatre factions (Émissaire, Veilleur, Gardien, Éclaireur) et de son identité de jeu",
   'un guide sur un archétype de deck possible avec les cartes existantes',
   'une comparaison entre plusieurs cartes de rareté proche',
   'un top 5 des cartes les plus intéressantes actuellement disponibles, avec justification',
   'des conseils pour un joueur débutant qui découvre Blue Rising',
-  'un décryptage d\'une mécanique de jeu (coût, puissance, soutien, effets) à travers des exemples de cartes',
+  "un décryptage d'une mécanique de jeu (coût, puissance, soutien, effets) à travers des exemples de cartes",
   'une synergie ou rivalité entre deux factions et comment ça se traduit sur le plateau',
   'un point sur le set en cours (nouveautés, répartition des raretés, cartes qui se distinguent)',
   'un focus collection sur une carte holo ou numérotée et ce qui la rend recherchée',
@@ -31,28 +31,28 @@ const TOPIC_ANGLES = [
   'un deck "petit budget" jouable uniquement avec des cartes Commune et Peu commune',
   'les erreurs les plus fréquentes de deckbuilding chez les joueurs qui débutent, avec des exemples concrets',
   'un guide pour contrer ou affronter un archétype de deck qui revient souvent',
-  'ce que les cartes d\'un set changent concrètement pour les decks et archétypes déjà existants',
-  'une analyse d\'un match-up entre deux factions précises et comment l\'aborder des deux côtés',
+  "ce que les cartes d'un set changent concrètement pour les decks et archétypes déjà existants",
+  "une analyse d'un match-up entre deux factions précises et comment l'aborder des deux côtés",
   'un glossaire ou lexique des mécaniques et termes du jeu pour les nouveaux joueurs',
   'un comparatif entre les raretés Prestige I, II et III : valeur de jeu vs valeur de collection',
-  'les cartes à prioriser pour compléter sa collection d\'un set donné, et pourquoi celles-là',
-  'un portrait de style de jeu (agressif, contrôle, valeur/lent) à travers les cartes qui l\'incarnent le mieux',
-  'un focus sur l\'artiste ou l\'illustration d\'une carte marquante et ce qu\'elle apporte à l\'ambiance du jeu',
+  "les cartes à prioriser pour compléter sa collection d'un set donné, et pourquoi celles-là",
+  "un portrait de style de jeu (agressif, contrôle, valeur/lent) à travers les cartes qui l'incarnent le mieux",
+  "un focus sur l'artiste ou l'illustration d'une carte marquante et ce qu'elle apporte à l'ambiance du jeu",
   'un deck multi-factions vs un deck mono-faction : avantages et compromis de chaque approche',
-  'un guide des meilleurs boosters/packs à acheter selon l\'objectif du joueur (compléter un set, chasser une carte précise, revendre)',
-  'un point sur la gestion et la conservation d\'une collection (classement, protection, stockage des cartes holos/numérotées/signées)',
-  'ce qui fait grimper la cote d\'une carte numérotée ou signée aux yeux des collectionneurs',
-  'un tour d\'horizon des rumeurs et leaks qui circulent sur un prochain set, présentés clairement comme non confirmés',
+  "un guide des meilleurs boosters/packs à acheter selon l'objectif du joueur (compléter un set, chasser une carte précise, revendre)",
+  "un point sur la gestion et la conservation d'une collection (classement, protection, stockage des cartes holos/numérotées/signées)",
+  "ce qui fait grimper la cote d'une carte numérotée ou signée aux yeux des collectionneurs",
+  "un tour d'horizon des rumeurs et leaks qui circulent sur un prochain set, présentés clairement comme non confirmés",
   'une théorie ou hypothèse sur la direction que pourrait prendre le jeu (nouvelle mécanique, nouvelle faction, évolution du scénario)',
-  'une carte qui fait un clin d\'oeil à un joueur, un événement ou une figure de la scène compétitive/communautaire, et ce que ça représente',
-  'un retour sur un événement communautaire ou compétitif autour de Blue Rising (tournoi, stream, sortie de set) et ce qu\'il faut en retenir',
+  "une carte qui fait un clin d'oeil à un joueur, un événement ou une figure de la scène compétitive/communautaire, et ce que ça représente",
+  "un retour sur un événement communautaire ou compétitif autour de Blue Rising (tournoi, stream, sortie de set) et ce qu'il faut en retenir",
   'un regard critique sur un point qui pose problème actuellement dans le jeu (équilibrage, distribution, disponibilité) et pourquoi',
-  'ce que Blue Rising réussit particulièrement bien par rapport à d\'autres jeux de cartes, avec des exemples concrets',
-  'un portrait d\'artiste : le style d\'un illustrateur à travers plusieurs de ses cartes',
-  'un portrait de joueur ou de figure de la communauté à travers les cartes qui le/la représentent ou qu\'il/elle affectionne',
+  "ce que Blue Rising réussit particulièrement bien par rapport à d'autres jeux de cartes, avec des exemples concrets",
+  "un portrait d'artiste : le style d'un illustrateur à travers plusieurs de ses cartes",
+  "un portrait de joueur ou de figure de la communauté à travers les cartes qui le/la représentent ou qu'il/elle affectionne",
 ]
 
-const SPECULATIVE_ANGLE_KEYWORDS = ['rumeur', 'leak', 'théorie', 'hypothèse', 'clin d\'oeil', 'figure de la']
+const SPECULATIVE_ANGLE_KEYWORDS = ['rumeur', 'leak', 'théorie', 'hypothèse', "clin d'oeil", 'figure de la']
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -113,9 +113,7 @@ Deno.serve(async (req) => {
 
     const [{ data: sets }, { data: cards }, { data: existingArticles }] = await Promise.all([
       supabase.from('sets').select('name, slug, card_count'),
-      supabase
-        .from('cards')
-        .select('name, rarity, type, subtype, faction, cost, power, support, effect, is_holo'),
+      supabase.from('cards').select('name, rarity, type, subtype, faction, cost, power, support, effect, is_holo'),
       supabase
         .from('articles')
         .select('title, topic_angle, featured_cards')

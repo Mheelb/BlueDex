@@ -3,17 +3,20 @@ import type { HTMLAttributes } from 'vue'
 import { LoaderCircleIcon } from '@lucide/vue'
 import { cn } from '@/lib/utils'
 
-const props = withDefaults(defineProps<{
-  loading?: boolean
-  error?: string | null
-  empty?: boolean
-  emptyMessage?: string
-  class?: HTMLAttributes['class']
-}>(), {
-  loading: false,
-  error: null,
-  empty: false,
-})
+const props = withDefaults(
+  defineProps<{
+    loading?: boolean
+    error?: string | null
+    empty?: boolean
+    emptyMessage?: string
+    class?: HTMLAttributes['class']
+  }>(),
+  {
+    loading: false,
+    error: null,
+    empty: false,
+  },
+)
 </script>
 
 <template>

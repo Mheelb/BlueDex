@@ -223,9 +223,9 @@ function cardBody(card, setName) {
 }
 
 function writeHtml(routePath, html) {
-  const dir = resolve(distDir, routePath.replace(/^\//, ''))
-  mkdirSync(dir, { recursive: true })
-  writeFileSync(resolve(dir, 'index.html'), html)
+  const file = resolve(distDir, `${routePath.replace(/^\//, '')}.html`)
+  mkdirSync(dirname(file), { recursive: true })
+  writeFileSync(file, html)
 }
 
 // --- Sitemap --------------------------------------------------------------

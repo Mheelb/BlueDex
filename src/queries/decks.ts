@@ -113,7 +113,7 @@ export async function fetchMyDecks(
   const { data, error, count } = await query.range(from, to)
   if (error) throw new Error(error.message)
 
-  const rows: DeckListItem[] = (data ?? []).map((row) => ({ ...row, author: null }))
+  const rows: DeckListItem[] = ((data ?? []) as DeckListItem[]).map((row) => ({ ...row, author: null }))
   return { rows, total: count ?? 0 }
 }
 

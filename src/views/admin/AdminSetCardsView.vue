@@ -179,14 +179,7 @@ function openDuplicateSheet(card: Card) {
 
 const validateRarity = ({ value }: { value: string }) => (value ? undefined : 'La rareté est requise.')
 
-function validateNumberedTotal({
-  value,
-  fieldApi,
-}: {
-  value: string | number
-  fieldApi: { form: { getFieldValue: (name: string) => unknown } }
-}) {
-  if (!fieldApi.form.getFieldValue('is_numbered')) return undefined
+function validateNumberedTotal({ value }: { value: string | number }) {
   if (value === '' || Number.isNaN(Number(value)) || Number(value) <= 0) {
     return "Le nombre d'exemplaires doit être un nombre positif."
   }
@@ -519,7 +512,7 @@ function onDelete(card: Card) {
               v-if="isNumberedField.state.value"
               v-slot="{ field }"
               name="numbered_total"
-              :validators="{ onChange: validateNumberedTotal, onChangeListenTo: ['is_numbered'] }"
+              :validators="{ onChange: validateNumberedTotal }"
             >
               <FormField
                 label="Nombre d'exemplaires"

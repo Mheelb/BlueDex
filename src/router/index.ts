@@ -80,6 +80,16 @@ const router = createRouter({
       component: () => import('@/views/admin/AdminArticlesView.vue'),
     },
     {
+      path: '/mentions-legales',
+      name: 'legal-notice',
+      component: () => import('@/views/legal/LegalNoticeView.vue'),
+    },
+    {
+      path: '/confidentialite',
+      name: 'privacy-policy',
+      component: () => import('@/views/legal/PrivacyPolicyView.vue'),
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: () => import('@/views/NotFoundView.vue'),

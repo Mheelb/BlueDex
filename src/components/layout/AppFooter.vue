@@ -50,6 +50,12 @@ async function onLogout() {
               Connexion
             </TextLink>
           </div>
+
+          <div class="flex flex-col gap-2">
+            <p class="font-medium text-foreground">Légal</p>
+            <TextLink :to="{ name: 'legal-notice' }">Mentions légales</TextLink>
+            <TextLink :to="{ name: 'privacy-policy' }">Confidentialité</TextLink>
+          </div>
         </nav>
       </div>
 

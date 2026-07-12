@@ -248,7 +248,9 @@ function urlEntry({ loc, lastmod, changefreq, priority }) {
 
 function writeSitemap({ articles, sets, cards }) {
   const entries = [
-    ...staticRoutes.map((r) => urlEntry({ loc: `${SITE_URL}${r.path}`, changefreq: r.changefreq, priority: r.priority })),
+    ...staticRoutes.map((r) =>
+      urlEntry({ loc: `${SITE_URL}${r.path}`, changefreq: r.changefreq, priority: r.priority }),
+    ),
     ...articles.map((a) =>
       urlEntry({
         loc: `${SITE_URL}/actus/${a.slug}`,
@@ -257,9 +259,7 @@ function writeSitemap({ articles, sets, cards }) {
         priority: '0.7',
       }),
     ),
-    ...sets.map((s) =>
-      urlEntry({ loc: `${SITE_URL}/sets/${s.slug}`, changefreq: 'weekly', priority: '0.7' }),
-    ),
+    ...sets.map((s) => urlEntry({ loc: `${SITE_URL}/sets/${s.slug}`, changefreq: 'weekly', priority: '0.7' })),
     ...cards
       .filter((c) => c.set?.slug)
       .map((c) =>

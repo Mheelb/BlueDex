@@ -12,7 +12,7 @@ const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const NETLIFY_BUILD_HOOK_URL = Deno.env.get('NETLIFY_BUILD_HOOK_URL')!
 
-const CORS_HEADERS = {tr
+const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }

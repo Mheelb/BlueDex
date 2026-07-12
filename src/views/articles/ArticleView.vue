@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { renderMarkdown } from '@/lib/markdown'
 import { articleKeys, fetchArticleBySlug } from '@/queries/articles'
+import { SITE_NAME, SITE_URL, absoluteUrl, usePageSeo, useJsonLd } from '@/lib/seo'
 import BackButton from '@/components/common/BackButton.vue'
 import QueryState from '@/components/common/QueryState.vue'
 import Heading from '@/components/common/Heading.vue'
@@ -20,6 +21,35 @@ const {
 
 const contentHtml = computed(() => (article.value ? renderMarkdown(article.value.content) : ''))
 
+usePageSeo({
+  title: () => article.value?.title,
+  description: () => article.value?.excerpt,
+  path: () => `/actus/${props.slug}`,
+  image: () => article.value?.cover_image_url ?? undefined,
+  type: 'article',
+})
+
+useJsonLd(() => {
+  const a = article.value
+  if (!a) return null
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: a.title,
+    description: a.excerpt,
+    image: a.cover_image_url ? [absoluteUrl(a.cover_image_url)] : undefined,
+    datePublished: a.published_at ?? a.created_at,
+    dateModified: a.published_at ?? a.created_at,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE_URL}/actus/${a.slug}` },
+    author: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+    publisher: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+  }
+})
+
 function formatDate(date: string | null) {
   if (!date) return ''
   return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -31,7 +61,9 @@ function formatDate(date: string | null) {
     <template v-if="article">
       <BackButton :to="{ name: 'articles' }" label="Retour aux actus" class="mb-6" />
 
-      <p class="text-sm text-muted-foreground">{{ formatDate(article.published_at) }}</p>
+      <p class="text-sm text-muted-foreground">
+        <time :datetime="article.published_at ?? article.created_at">{{ formatDate(article.published_at) }}</time>
+      </p>
       <Heading class="mt-1">{{ article.title }}</Heading>
 
       <img

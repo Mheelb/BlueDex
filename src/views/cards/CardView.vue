@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { useSetBySlug } from '@/composables/useSetBySlug'
 import { cardKeys, fetchCardByNumber } from '@/queries/cards'
+import { usePageSeo } from '@/lib/seo'
 import CardImage from '@/components/cards/CardImage.vue'
 import CardBadges from '@/components/cards/CardBadges.vue'
 import CardStatPills from '@/components/cards/CardStatPills.vue'
@@ -29,6 +30,16 @@ const {
 
 const loading = computed(() => setLoading.value || (!!setId.value && cardLoading.value))
 const error = computed(() => setError.value?.message ?? cardError.value?.message ?? null)
+
+usePageSeo({
+  title: () => (card.value && set.value ? `${card.value.name} · ${set.value.name}` : card.value?.name),
+  description: () =>
+    card.value && set.value
+      ? `${card.value.name} (#${card.value.number}) — carte du set ${set.value.name} de Blue Rising.`
+      : undefined,
+  path: () => `/sets/${props.setSlug}/cards/${props.cardNumber}`,
+  image: () => card.value?.image_url ?? undefined,
+})
 </script>
 
 <template>

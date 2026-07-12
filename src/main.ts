@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
+import { createHead } from '@unhead/vue/client'
 import { VueQueryPlugin } from '@tanstack/vue-query'
 import '@fontsource/inter/400.css'
 import '@fontsource/inter/500.css'
@@ -12,4 +13,6 @@ import App from './App.vue'
 import router from './router'
 import { queryClient } from './lib/queryClient'
 
-createApp(App).use(router).use(VueQueryPlugin, { queryClient }).mount('#app')
+const head = createHead()
+
+createApp(App).use(head).use(router).use(VueQueryPlugin, { queryClient }).mount('#app')

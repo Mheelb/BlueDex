@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/postbuild.mjs",
+    "prerender": "node scripts/postbuild.mjs",
     "typecheck": "vue-tsc -b",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -26,6 +27,7 @@
     "@tanstack/vue-query": "^5.101.2",
     "@tanstack/vue-table": "^8.21.3",
     "@tanstack/vue-virtual": "^3.13.31",
+    "@unhead/vue": "^3.1.8",
     "@vueuse/core": "^14.3.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

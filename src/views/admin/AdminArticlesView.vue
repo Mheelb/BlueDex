@@ -19,6 +19,7 @@ import ConfirmDeleteDialog from '@/components/common/ConfirmDeleteDialog.vue'
 import FormField from '@/components/form/FormField.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import QueryState from '@/components/common/QueryState.vue'
+import RebuildSiteButton from '@/components/admin/RebuildSiteButton.vue'
 
 const queryClient = useQueryClient()
 
@@ -160,10 +161,13 @@ function onDelete(article: Article) {
   <BackButton :to="{ name: 'admin-sets' }" label="Retour aux sets" class="mb-4" />
 
   <PageHeader title="Admin · Articles">
-    <Button :disabled="generateMutation.isPending.value" @click="onGenerate">
-      <SparklesIcon />
-      {{ generateMutation.isPending.value ? 'Génération...' : 'Générer un nouvel article' }}
-    </Button>
+    <div class="flex gap-2">
+      <RebuildSiteButton />
+      <Button :disabled="generateMutation.isPending.value" @click="onGenerate">
+        <SparklesIcon />
+        {{ generateMutation.isPending.value ? 'Génération...' : 'Générer un nouvel article' }}
+      </Button>
+    </div>
   </PageHeader>
 
   <p v-if="error" class="mb-4 text-sm text-destructive">{{ error }}</p>

@@ -19,14 +19,7 @@ export const RARITIES = [
 ] as const
 export type Rarity = (typeof RARITIES)[number]
 
-export const CARD_TYPES = [
-  'Personnage',
-  'Événement',
-  'Objet',
-  'Piège',
-  'Artefact',
-  'Environnement',
-] as const
+export const CARD_TYPES = ['Personnage', 'Événement', 'Objet', 'Piège', 'Artefact', 'Environnement'] as const
 export type CardType = (typeof CARD_TYPES)[number]
 
 export const TYPE_COLORS: Record<CardType, { bg: string; text: string }> = {

@@ -45,7 +45,7 @@ const form = useForm({
     </CardHeader>
     <CardContent>
       <form class="flex flex-col gap-4" @submit.prevent="() => form.handleSubmit()">
-        <form.Field name="email" :validators="{ onChange: required('Email requis.') }" v-slot="{ field }">
+        <form.Field v-slot="{ field }" name="email" :validators="{ onChange: required('Email requis.') }">
           <FormField label="Email" for="email" required :error="field.state.meta.errors[0]">
             <Input
               id="email"
@@ -58,7 +58,7 @@ const form = useForm({
           </FormField>
         </form.Field>
 
-        <form.Field name="password" :validators="{ onChange: required('Mot de passe requis.') }" v-slot="{ field }">
+        <form.Field v-slot="{ field }" name="password" :validators="{ onChange: required('Mot de passe requis.') }">
           <FormField label="Mot de passe" for="password" required :error="field.state.meta.errors[0]">
             <Input
               id="password"
@@ -71,7 +71,9 @@ const form = useForm({
           </FormField>
         </form.Field>
 
-        <p v-if="signInMutation.error.value" class="text-sm text-destructive">{{ signInMutation.error.value.message }}</p>
+        <p v-if="signInMutation.error.value" class="text-sm text-destructive">
+          {{ signInMutation.error.value.message }}
+        </p>
 
         <Button type="submit" :disabled="signInMutation.isPending.value">
           {{ signInMutation.isPending.value ? 'Connexion...' : 'Se connecter' }}

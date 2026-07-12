@@ -85,7 +85,9 @@ const table = useVueTable({
         :key="row.id"
         class="flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
       >
-        <div class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary text-primary">
+        <div
+          class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-secondary text-primary"
+        >
           <img
             v-if="row.original.cover_card?.image_url"
             :src="row.original.cover_card.image_url"
@@ -126,7 +128,9 @@ const table = useVueTable({
         <div v-if="showAuthor && row.original.author" class="flex shrink-0 items-center gap-2">
           <Avatar class="size-6">
             <AvatarImage v-if="row.original.author.avatar_url" :src="row.original.author.avatar_url" />
-            <AvatarFallback class="text-[10px]">{{ row.original.author.display_name.slice(0, 2).toUpperCase() }}</AvatarFallback>
+            <AvatarFallback class="text-[10px]">{{
+              row.original.author.display_name.slice(0, 2).toUpperCase()
+            }}</AvatarFallback>
           </Avatar>
           <span class="text-sm text-muted-foreground">{{ row.original.author.display_name }}</span>
         </div>
@@ -145,7 +149,12 @@ const table = useVueTable({
     </div>
 
     <div v-if="pageCount > 1" class="mt-3 flex items-center justify-center gap-3">
-      <Button variant="outline" size="icon" :disabled="pageIndex === 0" @click="emit('update:pageIndex', pageIndex - 1)">
+      <Button
+        variant="outline"
+        size="icon"
+        :disabled="pageIndex === 0"
+        @click="emit('update:pageIndex', pageIndex - 1)"
+      >
         <ChevronLeftIcon />
       </Button>
       <span class="text-sm text-muted-foreground">Page {{ pageIndex + 1 }} / {{ pageCount }}</span>

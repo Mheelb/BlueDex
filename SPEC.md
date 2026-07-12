@@ -27,6 +27,7 @@ Site répertoriant toutes les cartes du TCG **Blue Rising**, avec vocation à é
 ## Modèle de données (première approche)
 
 ### `sets` (collections)
+
 - `id`
 - `name`
 - `slug` (pour les URLs)
@@ -35,6 +36,7 @@ Site répertoriant toutes les cartes du TCG **Blue Rising**, avec vocation à é
 - `card_count` (nombre total de cartes du set, utile pour affichage "x/total")
 
 ### `cards`
+
 - `id`
 - `set_id` (FK vers `sets`)
 - `number` (numéro dans le set, ex: "045")
@@ -54,34 +56,41 @@ Site répertoriant toutes les cartes du TCG **Blue Rising**, avec vocation à é
 ## Fonctionnalités MVP
 
 ### 1. Liste des sets
+
 - Affichage de tous les sets (collections) disponibles.
 
 ### 2. Page d'un set
+
 - Affiche toutes les cartes du set sous forme de grille.
 - Cartes **filtrables** (par rareté, type, sous-type, faction au minimum) et **triables** (par numéro, nom, rareté...).
 - Chaque carte affiche : image scannée + nom + numéro en dessous.
 
 ### 3. Interactions sur la grille de cartes
+
 - **Hover** : la carte s'agrandit légèrement.
 - **Effet tilt** : légère inclinaison 3D de la carte qui suit le mouvement de la souris (effet type "carte à collectionner").
 - **Effet holographique** : appliqué uniquement sur les cartes dont la rareté est marquée comme "holo", en plus du tilt.
 - **Clic** : redirige vers la page de détail de la carte.
 
 ### 4. Page détail d'une carte
+
 - Affiche toutes les informations de la carte (image en grand, nom, numéro, rareté, type, sous-type, faction, coût, puissance, soutien, set d'appartenance, etc.).
 
 ### 5. Back-office admin
+
 - Accès protégé (Supabase Auth).
 - CRUD sets et cartes.
 - Upload des images scannées vers Supabase Storage.
 
 ## Hors scope pour le MVP (pistes futures)
+
 - Comptes visiteurs, favoris, collection personnelle.
 - Multilingue (i18n).
 - Recherche globale multi-sets.
 - Décks / deckbuilder.
 
 ## Points à clarifier avant/pendant l'implémentation
+
 - Liste exacte et complète des raretés du jeu Blue Rising, et lesquelles ont un effet holographique.
 - Format exact des données disponibles (scans + métadonnées) : à fournir par l'utilisateur pour amorcer le seed des premiers sets.
 - Valeurs possibles pour `type`, `subtype`, `faction` (pour construire les filtres).

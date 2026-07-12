@@ -6,7 +6,11 @@ import QueryState from '@/components/common/QueryState.vue'
 import Heading from '@/components/common/Heading.vue'
 import PageIntro from '@/components/common/PageIntro.vue'
 
-const { data: articles, isPending: loading, error } = useQuery({
+const {
+  data: articles,
+  isPending: loading,
+  error,
+} = useQuery({
   queryKey: articleKeys.published(),
   queryFn: () => fetchPublishedArticles(),
 })
@@ -18,7 +22,7 @@ function formatDate(date: string | null) {
 </script>
 
 <template>
-    <PageIntro
+  <PageIntro
     eyebrow="Actus"
     title="Suis les actualités"
     description="Cartes, factions, decks : les derniers articles autour de Blue Rising."

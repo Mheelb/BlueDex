@@ -17,7 +17,11 @@ const props = defineProps<{ setSlug: string; cardNumber: string }>()
 const { data: set, isPending: setLoading, error: setError } = useSetBySlug(() => props.setSlug)
 
 const setId = computed(() => set.value?.id)
-const { data: card, isPending: cardLoading, error: cardError } = useQuery({
+const {
+  data: card,
+  isPending: cardLoading,
+  error: cardError,
+} = useQuery({
   queryKey: computed(() => cardKeys.detail(setId.value ?? '', props.cardNumber)),
   queryFn: () => fetchCardByNumber(setId.value!, props.cardNumber),
   enabled: computed(() => !!setId.value),

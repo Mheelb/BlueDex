@@ -50,12 +50,20 @@ function updateFilters(target: 'public' | 'mine' | 'bookmarked', value: DeckList
   }
 }
 
-const { data: publicData, isPending: publicLoading, error: publicError } = useQuery({
+const {
+  data: publicData,
+  isPending: publicLoading,
+  error: publicError,
+} = useQuery({
   queryKey: computed(() => deckKeys.publicList(publicPage.value, publicFilters.value)),
   queryFn: () => fetchPublicDecks(publicPage.value, publicFilters.value),
 })
 
-const { data: myData, isPending: myLoading, error: myError } = useQuery({
+const {
+  data: myData,
+  isPending: myLoading,
+  error: myError,
+} = useQuery({
   queryKey: computed(() => deckKeys.myList(userId.value ?? '', myPage.value, myFilters.value)),
   queryFn: () => fetchMyDecks(userId.value!, myPage.value, myFilters.value),
   enabled: computed(() => !!userId.value),
@@ -77,7 +85,11 @@ const { data: starredIds } = useQuery({
 
 const starredIdSet = computed(() => starredIds.value ?? new Set<string>())
 
-const { data: bookmarkedData, isPending: bookmarkedLoading, error: bookmarkedError } = useQuery({
+const {
+  data: bookmarkedData,
+  isPending: bookmarkedLoading,
+  error: bookmarkedError,
+} = useQuery({
   queryKey: computed(() => deckKeys.bookmarkedList(userId.value ?? '', bookmarkedPage.value, bookmarkedFilters.value)),
   queryFn: () => fetchBookmarkedDecks([...bookmarkedIdSet.value], bookmarkedPage.value, bookmarkedFilters.value),
   enabled: computed(() => !!userId.value && bookmarkedIds.value !== undefined),

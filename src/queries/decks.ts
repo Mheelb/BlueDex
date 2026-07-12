@@ -8,7 +8,8 @@ export const deckKeys = {
   all: ['decks'] as const,
   detail: (deckId: string) => [...deckKeys.all, 'detail', deckId] as const,
   publicList: (page: number, filters: DeckListQuery) => [...deckKeys.all, 'public', page, filters] as const,
-  myList: (userId: string, page: number, filters: DeckListQuery) => [...deckKeys.all, 'mine', userId, page, filters] as const,
+  myList: (userId: string, page: number, filters: DeckListQuery) =>
+    [...deckKeys.all, 'mine', userId, page, filters] as const,
   bookmarkedList: (userId: string, page: number, filters: DeckListQuery) =>
     [...deckKeys.all, 'bookmarked', userId, page, filters] as const,
   bookmarkedIds: (userId: string) => [...deckKeys.all, 'bookmarked-ids', userId] as const,
@@ -54,7 +55,7 @@ export async function saveDeck(
     p_cover_card_id: coverCardId,
     p_entries: entries.map((e) => ({ card_id: e.card.id, quantity: e.quantity })),
   })
-  if (error || !data) throw new Error(error?.message ?? 'Impossible d\'enregistrer le deck.')
+  if (error || !data) throw new Error(error?.message ?? "Impossible d'enregistrer le deck.")
   return data as string
 }
 
@@ -63,6 +64,7 @@ function pageRange(page: number): [number, number] {
   return [from, from + DECK_LIST_PAGE_SIZE - 1]
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- shared across selects with different result shapes
 function applyDeckListQuery(query: any, filters: DeckListQuery) {
   let q = query
   const search = filters.search.trim()
@@ -99,9 +101,12 @@ export async function fetchMyDecks(
   const query = applyDeckListQuery(
     supabase
       .from('decks')
-      .select('id, name, format, star_count, updated_at, user_id, cover_card:cards!cover_card_id(image_url, name, is_holo)', {
-        count: 'exact',
-      })
+      .select(
+        'id, name, format, star_count, updated_at, user_id, cover_card:cards!cover_card_id(image_url, name, is_holo)',
+        {
+          count: 'exact',
+        },
+      )
       .eq('user_id', userId),
     filters,
   )

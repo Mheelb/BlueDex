@@ -30,9 +30,7 @@ async function onLogout() {
           <div class="flex flex-col gap-2">
             <p class="font-medium text-foreground">Naviguer</p>
             <TextLink :to="{ name: 'sets' }">Sets</TextLink>
-            <TextLink :to="{ name: 'deck-builder' }">
-              Deck Builder
-            </TextLink>
+            <TextLink :to="{ name: 'deck-builder' }"> Deck Builder </TextLink>
             <TextLink :to="{ name: 'articles' }">Actus</TextLink>
           </div>
 
@@ -46,9 +44,7 @@ async function onLogout() {
             >
               Déconnexion
             </button>
-            <TextLink v-else :to="{ name: 'login' }">
-              Connexion
-            </TextLink>
+            <TextLink v-else :to="{ name: 'login' }"> Connexion </TextLink>
           </div>
 
           <div class="flex flex-col gap-2">

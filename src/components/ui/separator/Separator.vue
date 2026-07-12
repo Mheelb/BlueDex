@@ -1,20 +1,17 @@
 <script setup lang="ts">
-import type { HTMLAttributes } from "vue"
-import type { SeparatorProps } from "reka-ui"
-import { reactiveOmit } from "@vueuse/core"
-import { Separator } from "reka-ui"
-import { cn } from "@/lib/utils"
-import BrandStar from "@/components/common/BrandStar.vue"
+import type { HTMLAttributes } from 'vue'
+import type { SeparatorProps } from 'reka-ui'
+import { reactiveOmit } from '@vueuse/core'
+import { Separator } from 'reka-ui'
+import { cn } from '@/lib/utils'
+import BrandStar from '@/components/common/BrandStar.vue'
 
-const props = withDefaults(
-  defineProps<SeparatorProps & { class?: HTMLAttributes["class"]; ornament?: boolean }>(),
-  {
-    orientation: "horizontal",
-    ornament: false,
-  },
-)
+const props = withDefaults(defineProps<SeparatorProps & { class?: HTMLAttributes['class']; ornament?: boolean }>(), {
+  orientation: 'horizontal',
+  ornament: false,
+})
 
-const delegatedProps = reactiveOmit(props, "class", "ornament")
+const delegatedProps = reactiveOmit(props, 'class', 'ornament')
 </script>
 
 <template>
@@ -27,9 +24,11 @@ const delegatedProps = reactiveOmit(props, "class", "ornament")
     v-else
     data-slot="separator"
     v-bind="delegatedProps"
-    :class="cn(
-      'bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px',
-      props.class,
-    )"
+    :class="
+      cn(
+        'bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px',
+        props.class,
+      )
+    "
   />
 </template>

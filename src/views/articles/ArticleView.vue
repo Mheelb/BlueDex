@@ -9,7 +9,11 @@ import Heading from '@/components/common/Heading.vue'
 
 const props = defineProps<{ slug: string }>()
 
-const { data: article, isPending: loading, error } = useQuery({
+const {
+  data: article,
+  isPending: loading,
+  error,
+} = useQuery({
   queryKey: computed(() => articleKeys.detail(props.slug)),
   queryFn: () => fetchArticleBySlug(props.slug),
 })
@@ -37,6 +41,7 @@ function formatDate(date: string | null) {
         class="mt-6 aspect-video w-full rounded-xl bg-gradient-to-br from-primary to-primary/70 object-cover"
       />
 
+      <!-- eslint-disable-next-line vue/no-v-html -- contentHtml is sanitized via DOMPurify in renderMarkdown -->
       <div class="prose prose-invert mt-8 max-w-none" v-html="contentHtml" />
     </template>
   </QueryState>

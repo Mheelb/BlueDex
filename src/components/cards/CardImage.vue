@@ -88,21 +88,14 @@ function onPointerLeave() {
 
 .card-tile__holo-shine {
   opacity: 0;
-  background: radial-gradient(
+  background:
+    radial-gradient(
       circle at var(--gx) var(--gy),
       rgba(255, 255, 255, 0.85) 0%,
       rgba(255, 255, 255, 0.15) 35%,
       transparent 60%
     ),
-    conic-gradient(
-      from 0deg at var(--gx) var(--gy),
-      #ff8fa8,
-      #ffd88f,
-      #8fc6ff,
-      #8fffc0,
-      #fff08f,
-      #ff8fa8
-    );
+    conic-gradient(from 0deg at var(--gx) var(--gy), #ff8fa8, #ffd88f, #8fc6ff, #8fffc0, #fff08f, #ff8fa8);
   background-blend-mode: overlay, normal;
   mix-blend-mode: overlay;
   transition: opacity 0.3s ease-out;

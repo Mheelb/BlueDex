@@ -179,8 +179,8 @@ async function onMigrateImages() {
   </div>
   <p v-else-if="migrationError" class="mb-4 text-sm text-destructive">{{ migrationError }}</p>
   <div v-else-if="migrationSummary" class="mb-4 text-sm text-muted-foreground">
-    {{ migrationSummary.optimizedCount }} image(s) optimisée(s), {{ formatKb(migrationSummary.bytesSaved) }}
-    économisés · {{ migrationSummary.skippedCount }} déjà optimales
+    {{ migrationSummary.optimizedCount }} image(s) optimisée(s), {{ formatKb(migrationSummary.bytesSaved) }} économisés
+    · {{ migrationSummary.skippedCount }} déjà optimales
     <span v-if="migrationSummary.errorCount"> · {{ migrationSummary.errorCount }} erreur(s)</span>
   </div>
 
@@ -225,9 +225,9 @@ async function onMigrateImages() {
       </SheetHeader>
       <Separator />
 
-      <form class="flex flex-1 flex-col overflow-y-auto" @submit.prevent="() => form.handleSubmit()" novalidate>
+      <form class="flex flex-1 flex-col overflow-y-auto" novalidate @submit.prevent="() => form.handleSubmit()">
         <div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
-          <form.Field name="name" :validators="{ onChange: required('Le nom est requis.') }" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="name" :validators="{ onChange: required('Le nom est requis.') }">
             <FormField label="Nom" for="set-name" required :error="field.state.meta.errors[0]">
               <Input
                 id="set-name"
@@ -238,7 +238,7 @@ async function onMigrateImages() {
               />
             </FormField>
           </form.Field>
-          <form.Field name="slug" :validators="{ onChange: validateSlug }" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="slug" :validators="{ onChange: validateSlug }">
             <FormField label="Slug" for="set-slug" required :error="field.state.meta.errors[0]">
               <Input
                 id="set-slug"
@@ -250,7 +250,7 @@ async function onMigrateImages() {
               />
             </FormField>
           </form.Field>
-          <form.Field name="release_date" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="release_date">
             <FormField label="Date de sortie" for="set-release">
               <Input
                 id="set-release"
@@ -260,7 +260,7 @@ async function onMigrateImages() {
               />
             </FormField>
           </form.Field>
-          <form.Field name="logo_url" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="logo_url">
             <FormField label="URL du logo" for="set-logo">
               <Input
                 id="set-logo"
@@ -270,7 +270,7 @@ async function onMigrateImages() {
               />
             </FormField>
           </form.Field>
-          <form.Field name="symbol_url" v-slot="{ field }">
+          <form.Field v-slot="{ field }" name="symbol_url">
             <FormField label="URL du symbole" for="set-symbol" class="sm:col-span-2">
               <Input
                 id="set-symbol"
@@ -287,7 +287,9 @@ async function onMigrateImages() {
           <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
           <div class="flex gap-3">
             <Button type="submit" :disabled="saveMutation.isPending.value">
-              {{ saveMutation.isPending.value ? 'Enregistrement...' : editingId ? 'Mettre à jour le set' : 'Créer le set' }}
+              {{
+                saveMutation.isPending.value ? 'Enregistrement...' : editingId ? 'Mettre à jour le set' : 'Créer le set'
+              }}
             </Button>
             <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>
           </div>

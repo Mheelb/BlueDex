@@ -14,9 +14,7 @@ const props = defineProps<{
 
 <template>
   <div :class="cn('flex flex-col gap-1.5', props.class)">
-    <Label v-if="label" :for="props.for">
-      {{ label }}<span v-if="required" class="text-destructive"> *</span>
-    </Label>
+    <Label v-if="label" :for="props.for"> {{ label }}<span v-if="required" class="text-destructive"> *</span> </Label>
     <slot />
     <p v-if="error" class="text-xs text-destructive">{{ error }}</p>
   </div>

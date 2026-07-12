@@ -108,11 +108,7 @@ router.beforeEach(async (to) => {
   }
 
   if (requiresAdmin) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', data.session.user.id)
-      .single()
+    const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', data.session.user.id).single()
     if (!profile?.is_admin) {
       return { name: 'login', query: { redirect: to.fullPath } }
     }

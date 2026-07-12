@@ -40,9 +40,7 @@ export function getDeckIssues(entries: DeckEntry[], format: DeckFormat): DeckIss
   const environnementCount = entries
     .filter((e) => e.card.type === 'Environnement')
     .reduce((sum, e) => sum + e.quantity, 0)
-  const artefactCount = entries
-    .filter((e) => e.card.type === 'Artefact')
-    .reduce((sum, e) => sum + e.quantity, 0)
+  const artefactCount = entries.filter((e) => e.card.type === 'Artefact').reduce((sum, e) => sum + e.quantity, 0)
   const distinctAspirants = new Set(entries.filter((e) => e.card.subtype === 'Aspirant').map((e) => e.card.name)).size
   const overLimitNames = getOverLimitCardNames(entries, format)
 
@@ -50,7 +48,10 @@ export function getDeckIssues(entries: DeckEntry[], format: DeckFormat): DeckIss
     { key: 'size', label: `${totalCards}/${rules.size} cartes`, ok: totalCards === rules.size },
     {
       key: 'copies',
-      label: overLimitNames.length === 0 ? "Nombre d'exemplaires respecté" : `Trop d'exemplaires : ${overLimitNames.join(', ')}`,
+      label:
+        overLimitNames.length === 0
+          ? "Nombre d'exemplaires respecté"
+          : `Trop d'exemplaires : ${overLimitNames.join(', ')}`,
       ok: overLimitNames.length === 0,
     },
     {

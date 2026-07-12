@@ -55,7 +55,9 @@ async function migrateOneCardImage(card: { id: string; image_url: string }): Pro
   return { cardId: card.id, status: 'optimized', beforeBytes: originalFile.size, afterBytes: optimized.size }
 }
 
-export async function migrateAllCardImages(onProgress?: (progress: MigrationProgress) => void): Promise<MigrationSummary> {
+export async function migrateAllCardImages(
+  onProgress?: (progress: MigrationProgress) => void,
+): Promise<MigrationSummary> {
   const { data: cards, error } = await supabase.from('cards').select('id, image_url').not('image_url', 'is', null)
   if (error) throw new Error(error.message)
 

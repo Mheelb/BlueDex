@@ -36,6 +36,8 @@ loadDotEnv('.env')
 
 const SITE_URL = (process.env.VITE_SITE_URL || 'https://bluedex.fr').replace(/\/$/, '')
 const SITE_NAME = 'BlueDex'
+const DEFAULT_DESCRIPTION =
+  'BlueDex, la base de données communautaire du jeu de cartes à collectionner Blue Rising : parcours les sets, filtre les cartes et prépare tes decks.'
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY
@@ -112,21 +114,24 @@ async function supabaseGet(path) {
 }
 
 // --- Construction du <head> SEO ------------------------------------------
-function buildHead({ title, description, canonical, image, type = 'website', publishedTime, jsonLd }) {
-  const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME
+function buildHead({ title, titleOverride, description, canonical, image, type = 'website', publishedTime, jsonLd }) {
+  // titleOverride : titre complet tel quel (sans suffixe « · BlueDex »), utile
+  // pour la home. Sinon : « <title> · BlueDex », ou juste « BlueDex ».
+  const fullTitle = titleOverride || (title ? `${title} · ${SITE_NAME}` : SITE_NAME)
+  const socialTitle = titleOverride || title || SITE_NAME
   const desc = description || ''
   const img = image || DEFAULT_OG_IMAGE
   const tags = [
     `<link rel="canonical" href="${escapeAttr(canonical)}" />`,
     `<meta property="og:site_name" content="${escapeAttr(SITE_NAME)}" />`,
     `<meta property="og:type" content="${escapeAttr(type)}" />`,
-    `<meta property="og:title" content="${escapeAttr(title || SITE_NAME)}" />`,
+    `<meta property="og:title" content="${escapeAttr(socialTitle)}" />`,
     `<meta property="og:description" content="${escapeAttr(desc)}" />`,
     `<meta property="og:url" content="${escapeAttr(canonical)}" />`,
     `<meta property="og:image" content="${escapeAttr(img)}" />`,
     `<meta property="og:locale" content="fr_FR" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
-    `<meta name="twitter:title" content="${escapeAttr(title || SITE_NAME)}" />`,
+    `<meta name="twitter:title" content="${escapeAttr(socialTitle)}" />`,
     `<meta name="twitter:description" content="${escapeAttr(desc)}" />`,
     `<meta name="twitter:image" content="${escapeAttr(img)}" />`,
   ]
@@ -370,9 +375,50 @@ async function main() {
     cardCount++
   }
 
+  // Pages statiques : la home est réécrite dans dist/index.html (qui sert aussi
+  // de fallback SPA), les autres en fichiers plats. Cela donne à ces routes de
+  // vraies balises OG dans le HTML servi aux bots (Discord/Twitter).
+  const staticPages = [
+    {
+      path: '/',
+      titleOverride: `${SITE_NAME} — La base de données communautaire de Blue Rising`,
+      description: DEFAULT_DESCRIPTION,
+    },
+    {
+      path: '/actus',
+      title: 'Actus',
+      description: 'Cartes, factions, decks : les derniers articles et actualités autour de Blue Rising.',
+    },
+    {
+      path: '/sets',
+      title: 'Sets',
+      description: 'Tous les sets de Blue Rising : parcours les cartes, filtre-les et prépare tes decks.',
+    },
+    {
+      path: '/decks',
+      title: 'Decks',
+      description: 'Construis et explore des decks Blue Rising à partir de la base de cartes communautaire.',
+    },
+  ]
+
+  let staticCount = 0
+  for (const page of staticPages) {
+    const canonical = page.path === '/' ? SITE_URL : `${SITE_URL}${page.path}`
+    const head = buildHead({
+      title: page.title,
+      titleOverride: page.titleOverride,
+      description: page.description,
+      canonical,
+    })
+    const html = applyToTemplate(template, head)
+    if (page.path === '/') writeFileSync(templatePath, html)
+    else writeHtml(page.path, html)
+    staticCount++
+  }
+
   const sitemapCount = writeSitemap({ articles, sets, cards })
   console.log(
-    `[postbuild] pré-rendu : ${articleCount} article(s), ${setCount} set(s), ${cardCount} carte(s) — sitemap: ${sitemapCount} URLs.`,
+    `[postbuild] pré-rendu : ${staticCount} page(s) statique(s), ${articleCount} article(s), ${setCount} set(s), ${cardCount} carte(s) — sitemap: ${sitemapCount} URLs.`,
   )
 }
 

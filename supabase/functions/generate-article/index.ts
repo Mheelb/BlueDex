@@ -166,12 +166,19 @@ Avant d'écrire, utilise l'outil de recherche web pour chercher s'il existe des 
 
 Écris un nouvel article en français dont l'angle est : ${topic}.${speculativeGuidance}
 
-Contraintes :
-- Ton enjoué mais informatif, destiné à des joueurs de Blue Rising.
-- Ne mentionne que des cartes/factions/sets présents dans les données fournies.
-- 300 à 500 mots, en Markdown (titres ##, listes si utile).
-- Un titre court et accrocheur (pas de guillemets autour).
-- Un extrait d'une phrase (max 160 caractères) qui résume l'article.
+Cet article doit être optimisé pour le référencement naturel (SEO) tout en restant agréable à lire pour de vrais joueurs. Applique ces principes.
+
+Contenu et structure :
+- 700 à 1100 mots, en Markdown. Structure claire avec des sous-titres ## (et ### si besoin) qui découpent l'article en sections courtes et scannables.
+- Ton enjoué mais informatif, destiné à des joueurs de Blue Rising. Phrases et paragraphes courts, listes à puces quand c'est pertinent.
+- Ne mentionne que des cartes/factions/sets présents dans les données fournies (n'invente rien).
+- Termine par une courte section de conclusion.
+
+SEO :
+- Choisis une expression-clé principale correspondant à ce qu'un joueur taperait dans Google (ex : "meilleures cartes [faction] Blue Rising", "deck [archétype] Blue Rising", "carte [nom] Blue Rising"). Emploie-la naturellement dans le titre, dans la première phrase de l'article, et dans au moins un sous-titre — sans bourrage de mots-clés (aucune répétition forcée ou artificielle).
+- Dans le corps du texte, utilise aussi des variantes et des termes proches de cette expression (synonymes, noms de cartes/factions liés).
+- Titre : à la fois accrocheur et descriptif, idéalement entre 45 et 60 caractères, contenant l'expression-clé, sans guillemets autour.
+- L'extrait sert de meta description pour Google : une phrase de 140 à 160 caractères, contenant l'expression-clé, qui donne envie de cliquer depuis les résultats de recherche.
 
 Une fois tes recherches terminées (ou d'emblée si elles ne sont pas utiles à cet angle), réponds en dernier avec uniquement un objet JSON strict de cette forme, sans texte autour :
 {"title": "...", "excerpt": "...", "content": "... (markdown) ...", "featured_cards": ["Nom exact de chaque carte mentionnée en bonne place dans l'article, tel qu'il apparaît dans les données fournies"]}`
@@ -193,7 +200,7 @@ Une fois tes recherches terminées (ou d'emblée si elles ne sont pas utiles à 
         },
         body: JSON.stringify({
           model: ANTHROPIC_MODEL,
-          max_tokens: 3000,
+          max_tokens: 6000,
           tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }],
           messages: anthropicMessages,
         }),

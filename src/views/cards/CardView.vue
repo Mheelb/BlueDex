@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useQuery } from '@tanstack/vue-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { toast } from 'vue-sonner'
+import { useAuthUser } from '@/composables/useAuthUser'
 import { useSetBySlug } from '@/composables/useSetBySlug'
 import { cardKeys, fetchCardByNumber } from '@/queries/cards'
+import { collectionKeys, fetchMyCollection, setCollectionQuantity } from '@/queries/collection'
 import { usePageSeo } from '@/lib/seo'
 import CardImage from '@/components/cards/CardImage.vue'
 import CardBadges from '@/components/cards/CardBadges.vue'
 import CardStatPills from '@/components/cards/CardStatPills.vue'
 import CardEffectText from '@/components/cards/CardEffectText.vue'
+import CollectionQuantityControl from '@/components/collection/CollectionQuantityControl.vue'
 import BackButton from '@/components/common/BackButton.vue'
 import { Badge } from '@/components/ui/badge'
 import QueryState from '@/components/common/QueryState.vue'
@@ -30,6 +34,35 @@ const {
 
 const loading = computed(() => setLoading.value || (!!setId.value && cardLoading.value))
 const error = computed(() => setError.value?.message ?? cardError.value?.message ?? null)
+
+const { session } = useAuthUser()
+const userId = computed(() => session.value?.user.id)
+const queryClient = useQueryClient()
+
+const { data: collection } = useQuery({
+  queryKey: computed(() => collectionKeys.mine(userId.value ?? '')),
+  queryFn: () => fetchMyCollection(userId.value!),
+  enabled: computed(() => !!userId.value),
+})
+
+const ownedQuantity = computed(() => (card.value ? (collection.value?.get(card.value.id) ?? 0) : 0))
+
+const quantityMutation = useMutation({
+  mutationFn: (quantity: number) => {
+    if (!userId.value || !card.value) throw new Error('Connecte-toi pour gérer ta collection.')
+    return setCollectionQuantity(userId.value, card.value.id, quantity)
+  },
+  onSuccess: () => {
+    if (userId.value) queryClient.invalidateQueries({ queryKey: collectionKeys.mine(userId.value) })
+  },
+  onError: (err) => {
+    toast.error(err.message)
+  },
+})
+
+function onUpdateQuantity(quantity: number) {
+  quantityMutation.mutate(quantity)
+}
 
 usePageSeo({
   title: () => (card.value && set.value ? `${card.value.name} · ${set.value.name}` : card.value?.name),
@@ -77,6 +110,17 @@ usePageSeo({
             <p class="mb-1 text-sm font-medium text-muted-foreground">Effet</p>
             <CardEffectText :text="card.effect" />
           </div>
+
+          <CollectionQuantityControl
+            v-if="userId"
+            :quantity="ownedQuantity"
+            class="mt-6"
+            @update:quantity="onUpdateQuantity"
+          />
+          <p v-else class="mt-6 text-sm text-muted-foreground">
+            <RouterLink :to="{ name: 'login' }" class="text-primary hover:underline">Connecte-toi</RouterLink>
+            pour ajouter cette carte à ta collection.
+          </p>
         </div>
       </div>
     </template>

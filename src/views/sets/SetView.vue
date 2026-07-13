@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useQuery } from '@tanstack/vue-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { toast } from 'vue-sonner'
 import { createEmptyCardFilters } from '@/types/card'
 import { filterAndSortCards } from '@/lib/filterCards'
+import { useAuthUser } from '@/composables/useAuthUser'
 import { useSetBySlug } from '@/composables/useSetBySlug'
 import { cardKeys, fetchCardsBySet } from '@/queries/cards'
+import { collectionKeys, fetchMyCollection, toggleCollectionOwned } from '@/queries/collection'
 import { usePageSeo } from '@/lib/seo'
 import CardFilters from '@/components/cards/CardFilters.vue'
 import CardTile from '@/components/cards/CardTile.vue'
@@ -12,6 +15,7 @@ import VirtualCardGrid from '@/components/cards/VirtualCardGrid.vue'
 import BackButton from '@/components/common/BackButton.vue'
 import QueryState from '@/components/common/QueryState.vue'
 import Heading from '@/components/common/Heading.vue'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const props = defineProps<{ setSlug: string }>()
 
@@ -32,14 +36,49 @@ const loading = computed(() => setLoading.value || (!!setId.value && cardsLoadin
 const error = computed(() => setError.value?.message ?? cardsError.value?.message ?? null)
 
 const filters = ref(createEmptyCardFilters())
+const missingOnly = ref(false)
 watch(
   () => props.setSlug,
   () => {
     filters.value = createEmptyCardFilters()
+    missingOnly.value = false
   },
 )
 
-const filteredCards = computed(() => filterAndSortCards(cards.value ?? [], filters.value))
+const { session } = useAuthUser()
+const userId = computed(() => session.value?.user.id)
+const queryClient = useQueryClient()
+
+const { data: collection } = useQuery({
+  queryKey: computed(() => collectionKeys.mine(userId.value ?? '')),
+  queryFn: () => fetchMyCollection(userId.value!),
+  enabled: computed(() => !!userId.value),
+})
+
+const collectionMap = computed(() => collection.value ?? new Map<string, number>())
+const ownedInSet = computed(() => (cards.value ?? []).filter((card) => collectionMap.value.has(card.id)).length)
+
+const filteredCards = computed(() => {
+  const base = filterAndSortCards(cards.value ?? [], filters.value)
+  return missingOnly.value ? base.filter((card) => !collectionMap.value.has(card.id)) : base
+})
+
+const toggleOwnedMutation = useMutation({
+  mutationFn: (cardId: string) => {
+    if (!userId.value) throw new Error('Connecte-toi pour gérer ta collection.')
+    return toggleCollectionOwned(userId.value, cardId, !collectionMap.value.has(cardId))
+  },
+  onSuccess: () => {
+    if (userId.value) queryClient.invalidateQueries({ queryKey: collectionKeys.mine(userId.value) })
+  },
+  onError: (err) => {
+    toast.error(err.message)
+  },
+})
+
+function onToggleOwned(cardId: string) {
+  toggleOwnedMutation.mutate(cardId)
+}
 
 usePageSeo({
   title: () => set.value?.name,
@@ -61,10 +100,25 @@ usePageSeo({
         <p class="mt-0.5 text-sm text-muted-foreground">
           {{ filteredCards.length }} / {{ (cards ?? []).length }} cartes
         </p>
+        <template v-if="userId">
+          <p class="mt-1 text-sm text-primary">{{ ownedInSet }} / {{ (cards ?? []).length }} possédées</p>
+          <div class="mt-1 h-1.5 w-40 overflow-hidden rounded-full bg-muted">
+            <div
+              class="h-full rounded-full bg-primary transition-all"
+              :style="{ width: `${(cards ?? []).length ? (ownedInSet / (cards ?? []).length) * 100 : 0}%` }"
+            />
+          </div>
+        </template>
       </div>
     </div>
 
-    <CardFilters v-model="filters" class="mb-6" />
+    <div class="mb-6 flex flex-wrap items-center gap-3">
+      <CardFilters v-model="filters" class="flex-1" />
+      <label v-if="userId" class="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
+        <Checkbox :model-value="missingOnly" @update:model-value="(v) => (missingOnly = !!v)" />
+        Cartes manquantes uniquement
+      </label>
+    </div>
 
     <QueryState
       :loading="loading"
@@ -74,7 +128,13 @@ usePageSeo({
     >
       <VirtualCardGrid :cards="filteredCards">
         <template #default="{ card }">
-          <CardTile :card="card" :set-slug="set.slug" />
+          <CardTile
+            :card="card"
+            :set-slug="set.slug"
+            :show-collection-toggle="!!userId"
+            :owned="collectionMap.has(card.id)"
+            @toggle-owned="onToggleOwned(card.id)"
+          />
         </template>
       </VirtualCardGrid>
     </QueryState>

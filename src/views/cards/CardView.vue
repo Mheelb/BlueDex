@@ -89,8 +89,10 @@ usePageSeo({
         </div>
 
         <div>
-          <div v-if="card.is_holo || card.is_signed || card.is_numbered || card.is_full_art || card.is_overframe"
-            class="mb-2 flex flex-wrap gap-2">
+          <div
+            v-if="card.is_holo || card.is_signed || card.is_numbered || card.is_full_art || card.is_overframe"
+            class="mb-2 flex flex-wrap gap-2"
+          >
             <Badge v-if="card.is_holo" variant="secondary">Holo</Badge>
             <Badge v-if="card.is_signed" variant="secondary">Signée</Badge>
             <Badge v-if="card.is_numbered" variant="secondary">Numérotée /{{ card.numbered_total }}</Badge>
@@ -109,8 +111,12 @@ usePageSeo({
             <CardEffectText :text="card.effect" />
           </div>
 
-          <CollectionQuantityControl v-if="userId" :quantity="ownedQuantity" class="mt-6"
-            @update:quantity="onUpdateQuantity" />
+          <CollectionQuantityControl
+            v-if="userId"
+            :quantity="ownedQuantity"
+            class="mt-6"
+            @update:quantity="onUpdateQuantity"
+          />
           <p v-else class="mt-6 text-sm text-muted-foreground">
             <RouterLink :to="{ name: 'login' }" class="text-primary hover:underline">Connecte-toi</RouterLink>
             pour ajouter cette carte à ta collection.

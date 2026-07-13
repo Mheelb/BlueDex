@@ -8,8 +8,13 @@ const percent = props.progress.total > 0 ? Math.round((props.progress.owned / pr
 </script>
 
 <template>
-  <RouterLink :to="{ name: 'set', params: { setSlug: progress.set.slug } }" class="group flex items-center gap-4 rounded-xl border bg-card p-4 transition-colors hover:border-primary/50">
-    <div class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-primary to-primary/70">
+  <RouterLink
+    :to="{ name: 'set', params: { setSlug: progress.set.slug } }"
+    class="group flex items-center gap-4 rounded-xl border bg-card p-4 transition-colors hover:border-primary/50"
+  >
+    <div
+      class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-primary to-primary/70"
+    >
       <img
         v-if="progress.set.logo_url || progress.set.symbol_url"
         :src="progress.set.logo_url ?? progress.set.symbol_url ?? undefined"

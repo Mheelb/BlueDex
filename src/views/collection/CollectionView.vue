@@ -49,7 +49,9 @@ const {
 })
 
 const loading = computed(() => setsLoading.value || cardsLoading.value || collectionLoading.value)
-const error = computed(() => setsError.value?.message ?? cardsError.value?.message ?? collectionError.value?.message ?? null)
+const error = computed(
+  () => setsError.value?.message ?? cardsError.value?.message ?? collectionError.value?.message ?? null,
+)
 
 const progressBySet = computed<SetCollectionProgress[]>(() => {
   const collectionMap = collection.value ?? new Map<string, number>()
@@ -62,7 +64,9 @@ const progressBySet = computed<SetCollectionProgress[]>(() => {
 
 const totalOwned = computed(() => progressBySet.value.reduce((sum, p) => sum + p.owned, 0))
 const totalCards = computed(() => progressBySet.value.reduce((sum, p) => sum + p.total, 0))
-const totalPercent = computed(() => (totalCards.value > 0 ? Math.round((totalOwned.value / totalCards.value) * 100) : 0))
+const totalPercent = computed(() =>
+  totalCards.value > 0 ? Math.round((totalOwned.value / totalCards.value) * 100) : 0,
+)
 </script>
 
 <template>

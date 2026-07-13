@@ -40,6 +40,7 @@ export async function fetchFeaturedCards(setId: string, limit: number): Promise<
     .from('cards')
     .select('*')
     .eq('set_id', setId)
+    .not('image_url', 'is', null)
     .order('is_holo', { ascending: false })
     .limit(limit)
 

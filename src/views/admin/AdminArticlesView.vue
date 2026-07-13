@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useForm } from '@tanstack/vue-form'
 import { PencilIcon, SparklesIcon, Trash2Icon } from '@lucide/vue'
+import { toast } from 'vue-sonner'
 import { supabase } from '@/lib/supabase'
 import type { Article } from '@/types/article'
 import { articleKeys, fetchAdminArticles } from '@/queries/articles'
@@ -42,13 +43,27 @@ function emptyForm() {
   }
 }
 
+const generateSheetOpen = ref(false)
+const genSubject = ref('')
+const genSources = ref('')
+
 const generateMutation = useMutation({
-  mutationFn: async () => {
-    const { error: invokeError } = await supabase.functions.invoke('generate-article')
+  mutationFn: async (payload: { subject: string; sources: string[] }) => {
+    const { error: invokeError } = await supabase.functions.invoke('generate-article', { body: payload })
     if (invokeError) throw new Error(invokeError.message)
   },
   onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: articleKeys.all })
+    // La génération tourne en tâche de fond côté edge function : la réponse est
+    // immédiate, l'article (brouillon) n'existe pas encore. On rafraîchit la
+    // liste un peu plus tard, le temps que la génération se termine.
+    generateSheetOpen.value = false
+    genSubject.value = ''
+    genSources.value = ''
+    toast.success('Génération lancée', {
+      description: "L'article (brouillon) apparaîtra ici dans une à deux minutes.",
+    })
+    setTimeout(() => queryClient.invalidateQueries({ queryKey: articleKeys.all }), 60_000)
+    setTimeout(() => queryClient.invalidateQueries({ queryKey: articleKeys.all }), 120_000)
   },
   onError: (err) => {
     error.value = err.message
@@ -57,7 +72,11 @@ const generateMutation = useMutation({
 
 function onGenerate() {
   error.value = null
-  generateMutation.mutate()
+  const sources = genSources.value
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  generateMutation.mutate({ subject: genSubject.value.trim(), sources })
 }
 
 const saveMutation = useMutation({
@@ -163,9 +182,9 @@ function onDelete(article: Article) {
   <PageHeader title="Admin · Articles">
     <div class="flex gap-2">
       <RebuildSiteButton />
-      <Button :disabled="generateMutation.isPending.value" @click="onGenerate">
+      <Button @click="generateSheetOpen = true">
         <SparklesIcon />
-        {{ generateMutation.isPending.value ? 'Génération...' : 'Générer un nouvel article' }}
+        Générer un nouvel article
       </Button>
     </div>
   </PageHeader>
@@ -206,6 +225,55 @@ function onDelete(article: Article) {
       </Card>
     </div>
   </QueryState>
+
+  <Sheet v-model:open="generateSheetOpen">
+    <SheetContent class="flex w-full flex-col gap-0 sm:max-w-lg">
+      <SheetHeader>
+        <SheetTitle>Générer un article</SheetTitle>
+      </SheetHeader>
+      <Separator />
+
+      <div class="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+        <div>
+          <label for="gen-subject" class="mb-1 block text-sm font-medium">
+            Sujet <span class="text-muted-foreground">(optionnel)</span>
+          </label>
+          <Textarea
+            id="gen-subject"
+            v-model="genSubject"
+            rows="3"
+            placeholder="Laisse vide pour que l'IA choisisse le sujet. Ex : Le matchup Gardien vs Veilleur, les meilleures cartes Émissaire…"
+          />
+        </div>
+
+        <div>
+          <label for="gen-sources" class="mb-1 block text-sm font-medium">
+            Sources <span class="text-muted-foreground">(optionnel)</span>
+          </label>
+          <Textarea id="gen-sources" v-model="genSources" rows="4" placeholder="Une URL par ligne." />
+          <p class="mt-1 text-xs text-muted-foreground">
+            Une URL par ligne. L'IA les lira attentivement — mais complètera toujours avec ses propres recherches.
+          </p>
+        </div>
+
+        <p class="text-xs text-muted-foreground">
+          La génération peut prendre jusqu'à une minute. L'article est créé en brouillon.
+        </p>
+      </div>
+
+      <Separator />
+      <SheetFooter>
+        <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
+        <div class="flex gap-3">
+          <Button :disabled="generateMutation.isPending.value" @click="onGenerate">
+            <SparklesIcon />
+            {{ generateMutation.isPending.value ? 'Génération…' : 'Générer' }}
+          </Button>
+          <Button type="button" variant="ghost" @click="generateSheetOpen = false">Annuler</Button>
+        </div>
+      </SheetFooter>
+    </SheetContent>
+  </Sheet>
 
   <Sheet v-model:open="sheetOpen">
     <SheetContent class="flex w-full flex-col gap-0 sm:max-w-xl">

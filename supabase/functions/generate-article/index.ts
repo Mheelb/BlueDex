@@ -87,6 +87,22 @@ function slugify(input: string): string {
     .replace(/(^-|-$)/g, '')
 }
 
+// Garde-fou liens internes : parcourt les liens Markdown pointant vers une page
+// interne (href commençant par "/") et retire ceux dont le chemin n'existe pas
+// dans le catalogue (allowedPaths). Le texte du lien est conservé, seule la
+// syntaxe de lien disparaît → aucun lien cassé dans les articles publiés. Les
+// liens externes (http…) ne sont pas touchés.
+function sanitizeInternalLinks(markdown: string, allowedPaths: Set<string>): { content: string; stripped: number } {
+  let stripped = 0
+  const content = markdown.replace(/\[([^\]]+)\]\((\/[^)\s]*)\)/g, (match, text: string, href: string) => {
+    const path = href.split(/[#?]/)[0].replace(/\/+$/, '') || '/'
+    if (allowedPaths.has(path)) return match
+    stripped++
+    return text
+  })
+  return { content, stripped }
+}
+
 // Échappe les caractères de contrôle (retours à la ligne, tabulations…) qui se
 // trouvent À L'INTÉRIEUR des chaînes JSON. Les modèles écrivent souvent le
 // contenu markdown avec de vrais sauts de ligne, ce que JSON.parse refuse.
@@ -237,18 +253,69 @@ Deno.serve(async (req) => {
 
         const [{ data: sets }, { data: cards }, { data: existingArticles }] = await Promise.all([
           supabase.from('sets').select('name, slug, card_count'),
-          supabase.from('cards').select('name, rarity, type, subtype, faction, cost, power, support, effect, is_holo'),
+          supabase
+            .from('cards')
+            .select(
+              'name, number, rarity, type, subtype, faction, cost, power, support, effect, is_holo, set:sets(slug, name)',
+            ),
           supabase
             .from('articles')
-            .select('title, topic_angle, featured_cards')
+            .select('title, slug, status, topic_angle, featured_cards')
             .order('created_at', { ascending: false })
             .limit(25),
         ])
 
         // On tire un échantillon aléatoire (et pas toujours les mêmes 60 premières
         // cartes de la table) pour que le modèle ait une vraie chance de parler
-        // d'autre chose que des cartes habituelles.
-        const cardSample = shuffle(cards ?? []).slice(0, 80)
+        // d'autre chose que des cartes habituelles. Chaque carte reçoit l'URL de sa
+        // page pour que le modèle puisse créer des liens internes (SEO) fiables.
+        const cardSample = shuffle(cards ?? [])
+          .slice(0, 80)
+          .map((c) => {
+            const setSlug = c.set?.slug
+            const url = setSlug && c.number != null ? `/sets/${setSlug}/cards/${c.number}` : undefined
+            return {
+              name: c.name,
+              number: c.number,
+              rarity: c.rarity,
+              type: c.type,
+              subtype: c.subtype,
+              faction: c.faction,
+              cost: c.cost,
+              power: c.power,
+              support: c.support,
+              effect: c.effect,
+              is_holo: c.is_holo,
+              set_name: c.set?.name ?? null,
+              url,
+            }
+          })
+
+        // Pages internes vers lesquelles le modèle peut créer des liens (SEO) :
+        // sets, deck builder et articles déjà publiés.
+        const setsForPrompt = (sets ?? []).map((s) => ({
+          name: s.name,
+          card_count: s.card_count,
+          url: `/sets/${s.slug}`,
+        }))
+        const publishedArticles = (existingArticles ?? []).filter((a) => a.status === 'published' && a.slug)
+        const linkableArticles = publishedArticles
+          .slice(0, 15)
+          .map((a) => ({ title: a.title, url: `/actus/${a.slug}` }))
+
+        // Ensemble des chemins internes réellement valides : sert de garde-fou pour
+        // retirer après coup tout lien que le modèle aurait inventé vers une page
+        // inexistante (slug approximatif, carte hors catalogue…).
+        const allowedPaths = new Set(['/', '/sets', '/decks', '/actus'])
+        for (const s of sets ?? []) {
+          if (s.slug) allowedPaths.add(`/sets/${s.slug}`)
+        }
+        for (const c of cards ?? []) {
+          if (c.set?.slug && c.number != null) allowedPaths.add(`/sets/${c.set.slug}/cards/${c.number}`)
+        }
+        for (const a of publishedArticles) {
+          allowedPaths.add(`/actus/${a.slug}`)
+        }
 
         // Cartes déjà mises en avant récemment (top 5, focus carte, etc.) : on les
         // signale au modèle pour qu'il évite de les reprendre en boucle.
@@ -302,12 +369,12 @@ Deno.serve(async (req) => {
 
 Voici des données réelles du jeu à utiliser comme référence factuelle (n'invente pas de règles qui les contredisent) :
 
-Sets: ${JSON.stringify(sets)}
+Sets (chaque set a une page à l'URL indiquée dans son champ "url") : ${JSON.stringify(setsForPrompt)}
 
-Extrait de cartes existantes (échantillon aléatoire, pas nécessairement exhaustif) : ${JSON.stringify(cardSample)}
+Extrait de cartes existantes (échantillon aléatoire, pas nécessairement exhaustif ; chaque carte a une page à l'URL indiquée dans son champ "url" quand elle est disponible) : ${JSON.stringify(cardSample)}
 
 Titres d'articles déjà publiés (n'en refais pas un similaire) : ${JSON.stringify(existingTitles)}
-
+${linkableArticles.length ? `\nAutres articles déjà publiés que tu peux citer en lien interne si le sujet s'y prête : ${JSON.stringify(linkableArticles)}\n` : ''}
 Cartes déjà mises en avant dans des articles récents (à éviter sauf si l'angle l'exige vraiment — privilégie des cartes différentes pour renouveler le contenu) : ${JSON.stringify(recentlyFeaturedCards)}
 
 Base-toi sur les données du jeu fournies ci-dessus, et sur les sources de l'éditeur s'il y en a. N'invente jamais de règle, d'avis ni de source.
@@ -328,6 +395,12 @@ SEO :
 - Dans le corps du texte, utilise aussi des variantes et des termes proches de cette expression (synonymes, noms de cartes/factions liés).
 - Titre : à la fois accrocheur et descriptif, idéalement entre 45 et 60 caractères, contenant l'expression-clé, sans guillemets autour.
 - L'extrait sert de meta description pour Google : une phrase de 140 à 160 caractères, contenant l'expression-clé, qui donne envie de cliquer depuis les résultats de recherche.
+
+Liens internes (essentiel pour le SEO — ne néglige pas ce point) :
+- Quand tu mentionnes une carte, un set ou un autre article présents dans les données ci-dessus, transforme naturellement la première mention en lien Markdown vers sa page, en utilisant EXACTEMENT l'URL de son champ "url". Exemple : [Nom de la carte](/sets/mon-set/cards/12).
+- Renvoie aussi vers le deck builder (/decks) quand tu évoques la construction de decks, et vers la liste des sets (/sets) quand c'est pertinent.
+- N'utilise QUE des URLs présentes dans les données fournies (ou les pages /, /sets, /decks, /actus). N'invente JAMAIS d'URL, et ne mets pas de lien sur une carte dont l'URL n'est pas fournie.
+- Vise 3 à 6 liens internes bien répartis et intégrés dans les phrases. Ne fais ni liste de liens, ni lien forcé ou artificiel.
 
 Réponds avec un objet JSON de cette forme (le contenu markdown de l'article va dans le champ "content") :
 {"title": "...", "excerpt": "...", "content": "... (markdown) ...", "featured_cards": ["Nom exact de chaque carte mentionnée en bonne place dans l'article, tel qu'il apparaît dans les données fournies"]}`
@@ -385,7 +458,14 @@ Réponds avec un objet JSON de cette forme (le contenu markdown de l'article va 
           content: string
           featured_cards?: string[]
         }
-        console.log('[generate] parsed', { title: parsed.title, contentLength: parsed.content?.length })
+        // Garde-fou : on retire tout lien interne inventé par le modèle avant
+        // d'enregistrer l'article (les liens vers de vraies pages sont conservés).
+        const { content, stripped } = sanitizeInternalLinks(parsed.content, allowedPaths)
+        console.log('[generate] parsed', {
+          title: parsed.title,
+          contentLength: content.length,
+          strippedLinks: stripped,
+        })
 
         let slug = slugify(parsed.title)
         const { data: slugCollision } = await supabase.from('articles').select('id').eq('slug', slug).maybeSingle()
@@ -399,7 +479,7 @@ Réponds avec un objet JSON de cette forme (le contenu markdown de l'article va 
             title: parsed.title,
             slug,
             excerpt: parsed.excerpt,
-            content: parsed.content,
+            content,
             status: 'draft',
             topic_angle: topic,
             featured_cards: parsed.featured_cards ?? [],

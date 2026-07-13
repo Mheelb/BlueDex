@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query'
 import { fetchSets, setKeys } from '@/queries/sets'
+import { usePageSeo } from '@/lib/seo'
 import SetsHero from '@/components/sets/SetsHero.vue'
 import SetCard from '@/components/sets/SetCard.vue'
 import QueryState from '@/components/common/QueryState.vue'
+
+usePageSeo({
+  title: 'Tous les sets Blue Rising',
+  description:
+    'Tous les sets du TCG Blue Rising : parcours les cartes, filtre-les par faction ou rareté et prépare tes decks.',
+  path: '/sets',
+})
 
 const {
   data: sets,

@@ -58,9 +58,15 @@ function replaceCardSymbols(html) {
   })
 }
 
+// La page article a déjà un <h1> (le titre) : on dégrade tout H1 du contenu en
+// H2 pour éviter deux H1 sur la page (anti-pattern SEO).
+function demoteHeadings(html) {
+  return html.replace(/<(\/?)h1(\s[^>]*)?>/gi, '<$1h2$2>')
+}
+
 function renderMarkdown(source) {
   const html = marked.parse(source ?? '', { async: false })
-  return purify.sanitize(replaceCardSymbols(html))
+  return purify.sanitize(demoteHeadings(replaceCardSymbols(html)))
 }
 
 // --- Helpers d'échappement ------------------------------------------------

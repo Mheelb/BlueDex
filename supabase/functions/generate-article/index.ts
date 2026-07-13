@@ -10,6 +10,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 const ANTHROPIC_MODEL = 'claude-sonnet-5'
 
+// Global fourni par le runtime Supabase Edge pour les tâches de fond.
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void }
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -54,6 +57,20 @@ const TOPIC_ANGLES = [
 
 const SPECULATIVE_ANGLE_KEYWORDS = ['rumeur', 'leak', 'théorie', 'hypothèse', "clin d'oeil", 'figure de la']
 
+// Schéma de sortie structurée : l'API garantit un JSON valide et conforme —
+// fini les erreurs de parsing (caractères de contrôle, guillemets non échappés…).
+const ARTICLE_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    excerpt: { type: 'string' },
+    content: { type: 'string' },
+    featured_cards: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['title', 'excerpt', 'content', 'featured_cards'],
+  additionalProperties: false,
+}
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -70,10 +87,90 @@ function slugify(input: string): string {
     .replace(/(^-|-$)/g, '')
 }
 
+// Échappe les caractères de contrôle (retours à la ligne, tabulations…) qui se
+// trouvent À L'INTÉRIEUR des chaînes JSON. Les modèles écrivent souvent le
+// contenu markdown avec de vrais sauts de ligne, ce que JSON.parse refuse.
+function escapeControlCharsInStrings(s: string): string {
+  let out = ''
+  let inString = false
+  let escaped = false
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]
+    if (escaped) {
+      out += ch
+      escaped = false
+      continue
+    }
+    if (ch === '\\') {
+      out += ch
+      escaped = true
+      continue
+    }
+    if (ch === '"') {
+      inString = !inString
+      out += ch
+      continue
+    }
+    const code = ch.charCodeAt(0)
+    if (inString && code < 0x20) {
+      if (ch === '\n') out += '\\n'
+      else if (ch === '\r') out += '\\r'
+      else if (ch === '\t') out += '\\t'
+      else out += '\\u' + code.toString(16).padStart(4, '0')
+      continue
+    }
+    out += ch
+  }
+  return out
+}
+
+// Le modèle peut entourer le JSON de texte (prose, bloc ```json) et y laisser
+// des caractères de contrôle bruts. On extrait donc l'objet de façon robuste :
+// on essaie chaque candidat tel quel, puis après assainissement.
 function extractJson(text: string): unknown {
+  const candidates: string[] = []
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
-  const raw = fenced ? fenced[1] : text
-  return JSON.parse(raw.trim())
+  if (fenced) candidates.push(fenced[1].trim())
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start !== -1 && end > start) candidates.push(text.slice(start, end + 1))
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate)
+    } catch {
+      try {
+        return JSON.parse(escapeControlCharsInStrings(candidate))
+      } catch {
+        // candidat suivant
+      }
+    }
+  }
+  throw new Error('Aucun objet JSON valide trouvé dans la réponse du modèle.')
+}
+
+// Récupère le texte lisible d'une URL source (extraction HTML grossière, bornée).
+// On le fait côté serveur plutôt que via l'outil web_fetch, qui faisait boucler
+// le modèle en pause_turn et exploser la consommation de tokens.
+async function fetchSourceText(url: string): Promise<string> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; BlueDexBot/1.0)' },
+      signal: AbortSignal.timeout(15000),
+    })
+    if (!res.ok) return ''
+    const html = await res.text()
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&[a-z]+;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    return text.slice(0, 6000)
+  } catch {
+    return ''
+  }
 }
 
 function shuffle<T>(items: T[]): T[] {
@@ -108,49 +205,100 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Non autorisé.' }, 401)
   }
 
+  // Paramètres optionnels envoyés par l'admin : un sujet imposé et/ou des
+  // sources à consulter. Corps absent = l'IA choisit tout elle-même.
+  let requestBody: { subject?: unknown; sources?: unknown } = {}
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    requestBody = await req.json()
+  } catch {
+    // Pas de corps JSON : comportement automatique.
+  }
+  const userSubject = typeof requestBody.subject === 'string' ? requestBody.subject.trim() : ''
+  const userSources = Array.isArray(requestBody.sources)
+    ? requestBody.sources
+        .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+        .map((s) => s.trim())
+        .slice(0, 10)
+    : []
 
-    const [{ data: sets }, { data: cards }, { data: existingArticles }] = await Promise.all([
-      supabase.from('sets').select('name, slug, card_count'),
-      supabase.from('cards').select('name, rarity, type, subtype, faction, cost, power, support, effect, is_holo'),
-      supabase
-        .from('articles')
-        .select('title, topic_angle, featured_cards')
-        .order('created_at', { ascending: false })
-        .limit(25),
-    ])
+  // Génération lancée en TÂCHE DE FOND : on répond immédiatement (202) pour ne
+  // pas tenir la requête ouverte (limite d'idle timeout de 150 s des edge
+  // functions). Le résultat n'est donc plus renvoyé au client — le suivi se fait
+  // via les logs [generate], et l'article apparaît en brouillon une fois prêt.
+  EdgeRuntime.waitUntil(
+    (async () => {
+      try {
+        console.log('[generate] start', {
+          subject: userSubject ? 'oui' : 'non',
+          sources: userSources.length,
+          hasAnthropicKey: !!ANTHROPIC_API_KEY,
+        })
+        const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    // On tire un échantillon aléatoire (et pas toujours les mêmes 60 premières
-    // cartes de la table) pour que le modèle ait une vraie chance de parler
-    // d'autre chose que des cartes habituelles.
-    const cardSample = shuffle(cards ?? []).slice(0, 80)
+        const [{ data: sets }, { data: cards }, { data: existingArticles }] = await Promise.all([
+          supabase.from('sets').select('name, slug, card_count'),
+          supabase.from('cards').select('name, rarity, type, subtype, faction, cost, power, support, effect, is_holo'),
+          supabase
+            .from('articles')
+            .select('title, topic_angle, featured_cards')
+            .order('created_at', { ascending: false })
+            .limit(25),
+        ])
 
-    // Cartes déjà mises en avant récemment (top 5, focus carte, etc.) : on les
-    // signale au modèle pour qu'il évite de les reprendre en boucle.
-    const recentlyFeaturedCards = Array.from(
-      new Set((existingArticles ?? []).flatMap((a) => a.featured_cards ?? [])),
-    ).slice(0, 60)
+        // On tire un échantillon aléatoire (et pas toujours les mêmes 60 premières
+        // cartes de la table) pour que le modèle ait une vraie chance de parler
+        // d'autre chose que des cartes habituelles.
+        const cardSample = shuffle(cards ?? []).slice(0, 80)
 
-    // On évite de reproposer l'un des derniers angles utilisés (environ un
-    // tiers du pool, pour laisser le temps aux autres angles de tourner).
-    const recentAngles = new Set(
-      (existingArticles ?? [])
-        .slice(0, Math.ceil(TOPIC_ANGLES.length / 3))
-        .map((a) => a.topic_angle)
-        .filter(Boolean),
-    )
-    const availableAngles = TOPIC_ANGLES.filter((t) => !recentAngles.has(t))
-    const topic = shuffle(availableAngles.length > 0 ? availableAngles : TOPIC_ANGLES)[0]
+        // Cartes déjà mises en avant récemment (top 5, focus carte, etc.) : on les
+        // signale au modèle pour qu'il évite de les reprendre en boucle.
+        const recentlyFeaturedCards = Array.from(
+          new Set((existingArticles ?? []).flatMap((a) => a.featured_cards ?? [])),
+        ).slice(0, 60)
 
-    const existingTitles = (existingArticles ?? []).map((a) => a.title)
+        // On évite de reproposer l'un des derniers angles utilisés (environ un
+        // tiers du pool, pour laisser le temps aux autres angles de tourner).
+        const recentAngles = new Set(
+          (existingArticles ?? [])
+            .slice(0, Math.ceil(TOPIC_ANGLES.length / 3))
+            .map((a) => a.topic_angle)
+            .filter(Boolean),
+        )
+        const availableAngles = TOPIC_ANGLES.filter((t) => !recentAngles.has(t))
+        const randomAngle = shuffle(availableAngles.length > 0 ? availableAngles : TOPIC_ANGLES)[0]
+        // Sujet imposé par l'admin s'il y en a un, sinon un angle tiré au hasard.
+        const topic = userSubject || randomAngle
 
-    const isSpeculativeAngle = SPECULATIVE_ANGLE_KEYWORDS.some((kw) => topic.includes(kw))
-    const speculativeGuidance = isSpeculativeAngle
-      ? `\n\nCet angle touche à des rumeurs, leaks, théories ou à des personnes/événements réels : sois particulièrement rigoureux. Ne présente jamais une rumeur ou une hypothèse comme un fait acquis (utilise des formulations claires : "rumeur non confirmée", "certains joueurs pensent que", "si l'on en croit..."). Ne fais un lien entre une carte et une personne/un événement réel que s'il est corroboré par les données de carte fournies (nom, effet, artiste) ou par une recherche web fiable — n'invente aucune connexion, aucun leak, aucune citation.`
-      : ''
+        const existingTitles = (existingArticles ?? []).map((a) => a.title)
 
-    const prompt = `Tu écris pour le blog de BlueDex, un site communautaire (non-officiel) dédié au jeu de cartes à collectionner "Blue Rising".
+        const isSpeculativeAngle = SPECULATIVE_ANGLE_KEYWORDS.some((kw) => topic.includes(kw))
+        const speculativeGuidance = isSpeculativeAngle
+          ? `\n\nCet angle touche à des rumeurs, leaks, théories ou à des personnes/événements réels : sois particulièrement rigoureux. Ne présente jamais une rumeur ou une hypothèse comme un fait acquis (utilise des formulations claires : "rumeur non confirmée", "certains joueurs pensent que", "si l'on en croit..."). Ne fais un lien entre une carte et une personne/un événement réel que s'il est corroboré par les données de carte fournies (nom, effet, artiste) ou par une recherche web fiable — n'invente aucune connexion, aucun leak, aucune citation.`
+          : ''
+
+        // Consigne d'angle : sujet imposé par l'éditeur, ou angle éditorial libre.
+        const angleLine = userSubject
+          ? `Écris un nouvel article en français sur le sujet précis demandé par l'éditeur : "${userSubject}". Prends le temps de bien cerner ce sujet, de le comprendre et de le traiter en profondeur, avec justesse et sans le survoler.`
+          : `Écris un nouvel article en français dont l'angle est : ${topic}.`
+
+        // Sources fournies par l'éditeur : on récupère leur contenu NOUS-MÊMES
+        // (borné) et on l'injecte dans le prompt, plutôt que de laisser le modèle
+        // les fetcher via un outil (qui faisait boucler la génération).
+        let sourcesGuidance = ''
+        if (userSources.length > 0) {
+          const fetched = await Promise.all(
+            userSources.slice(0, 3).map(async (url) => ({ url, text: await fetchSourceText(url) })),
+          )
+          const withText = fetched.filter((f) => f.text.length > 0)
+          console.log('[generate] sources', { demandées: userSources.length, récupérées: withText.length })
+          sourcesGuidance = withText.length
+            ? `\n\nL'éditeur te fournit ces sources. Lis-les attentivement, comprends-les et appuie-toi dessus ; cite-les naturellement quand c'est pertinent (sans coller de lien brut ni inventer de citation). Voici leur contenu extrait :\n\n${withText
+                .map((f, i) => `Source ${i + 1} (${f.url}) :\n${f.text}`)
+                .join('\n\n')}`
+            : ''
+        }
+
+        const prompt = `Tu écris pour le blog de BlueDex, un site communautaire (non-officiel) dédié au jeu de cartes à collectionner "Blue Rising".
 
 Voici des données réelles du jeu à utiliser comme référence factuelle (n'invente pas de règles qui les contredisent) :
 
@@ -162,14 +310,15 @@ Titres d'articles déjà publiés (n'en refais pas un similaire) : ${JSON.string
 
 Cartes déjà mises en avant dans des articles récents (à éviter sauf si l'angle l'exige vraiment — privilégie des cartes différentes pour renouveler le contenu) : ${JSON.stringify(recentlyFeaturedCards)}
 
-Avant d'écrire, utilise l'outil de recherche web pour chercher s'il existe des discussions, avis ou réactions récentes et réellement pertinentes sur le jeu "Blue Rising" (forums, réseaux sociaux, articles communautaires). Si tu trouves quelque chose de concret et pertinent par rapport à l'angle choisi, appuie-toi dessus et mentionne la source de façon naturelle dans le texte (ex : "sur les réseaux, plusieurs joueurs remarquent que...", sans lien brut ni citation inventée). Si la recherche ne renvoie rien de pertinent ou d'exploitable, n'insiste pas et n'invente aucun avis ou source — base-toi uniquement sur les données du jeu fournies ci-dessus.
+Base-toi sur les données du jeu fournies ci-dessus, et sur les sources de l'éditeur s'il y en a. N'invente jamais de règle, d'avis ni de source.
 
-Écris un nouvel article en français dont l'angle est : ${topic}.${speculativeGuidance}
+${angleLine}${speculativeGuidance}${sourcesGuidance}
 
 Cet article doit être optimisé pour le référencement naturel (SEO) tout en restant agréable à lire pour de vrais joueurs. Applique ces principes.
 
 Contenu et structure :
 - 700 à 1100 mots, en Markdown. Structure claire avec des sous-titres ## (et ### si besoin) qui découpent l'article en sections courtes et scannables.
+- Ne répète PAS le titre en début de contenu et n'utilise AUCUN titre de niveau # (H1) : la page affiche déjà le titre en H1. Commence directement par le paragraphe d'introduction, puis utilise ## et ### pour les sections.
 - Ton enjoué mais informatif, destiné à des joueurs de Blue Rising. Phrases et paragraphes courts, listes à puces quand c'est pertinent.
 - Ne mentionne que des cartes/factions/sets présents dans les données fournies (n'invente rien).
 - Termine par une courte section de conclusion.
@@ -180,83 +329,95 @@ SEO :
 - Titre : à la fois accrocheur et descriptif, idéalement entre 45 et 60 caractères, contenant l'expression-clé, sans guillemets autour.
 - L'extrait sert de meta description pour Google : une phrase de 140 à 160 caractères, contenant l'expression-clé, qui donne envie de cliquer depuis les résultats de recherche.
 
-Une fois tes recherches terminées (ou d'emblée si elles ne sont pas utiles à cet angle), réponds en dernier avec uniquement un objet JSON strict de cette forme, sans texte autour :
+Réponds avec un objet JSON de cette forme (le contenu markdown de l'article va dans le champ "content") :
 {"title": "...", "excerpt": "...", "content": "... (markdown) ...", "featured_cards": ["Nom exact de chaque carte mentionnée en bonne place dans l'article, tel qu'il apparaît dans les données fournies"]}`
 
-    const anthropicMessages: Array<{ role: string; content: unknown }> = [{ role: 'user', content: prompt }]
-    let anthropicData: { content?: Array<{ type: string; text?: string }>; stop_reason?: string } | undefined
+        const anthropicMessages: Array<{ role: string; content: unknown }> = [{ role: 'user', content: prompt }]
 
-    // web_search est un outil exécuté côté serveur Anthropic : la boucle de
-    // recherche se fait dans la même requête, mais peut s'arrêter sur
-    // stop_reason "pause_turn" si elle prend trop d'itérations. On relance
-    // dans ce cas en renvoyant la conversation telle quelle.
-    for (let i = 0; i < 3; i++) {
-      const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: ANTHROPIC_MODEL,
-          max_tokens: 6000,
-          tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }],
-          messages: anthropicMessages,
-        }),
-      })
+        // Un seul appel. output_config.format (structured outputs) garantit un
+        // JSON conforme au schéma → parsing fiable. Pas d'outil serveur, donc
+        // pas de boucle pause_turn : rapide et prévisible.
+        const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: ANTHROPIC_MODEL,
+            max_tokens: 6000,
+            // effort bas : Sonnet 5 est très agentique par défaut ; on va droit au but.
+            output_config: { effort: 'low', format: { type: 'json_schema', schema: ARTICLE_SCHEMA } },
+            messages: anthropicMessages,
+          }),
+        })
 
-      if (!anthropicResponse.ok) {
-        const errText = await anthropicResponse.text()
-        return jsonResponse({ error: `Anthropic API error: ${errText}` }, 502)
+        if (!anthropicResponse.ok) {
+          const errText = await anthropicResponse.text()
+          console.error('[generate] Anthropic API error', anthropicResponse.status, errText)
+          return
+        }
+
+        const anthropicData = (await anthropicResponse.json()) as {
+          content?: Array<{ type: string; text?: string }>
+          stop_reason?: string
+        }
+        console.log('[generate] anthropic response', {
+          stop_reason: anthropicData?.stop_reason,
+          blocks: anthropicData?.content?.length,
+        })
+
+        // On concatène tous les blocs texte (le JSON peut être suivi de prose,
+        // ou réparti autrement) avant d'en extraire l'objet JSON.
+        const fullText = (anthropicData?.content ?? [])
+          .filter((b) => b.type === 'text' && b.text)
+          .map((b) => b.text as string)
+          .join('\n')
+        if (!fullText.trim()) {
+          console.error('[generate] réponse Anthropic sans contenu texte')
+          return
+        }
+
+        const parsed = extractJson(fullText) as {
+          title: string
+          excerpt: string
+          content: string
+          featured_cards?: string[]
+        }
+        console.log('[generate] parsed', { title: parsed.title, contentLength: parsed.content?.length })
+
+        let slug = slugify(parsed.title)
+        const { data: slugCollision } = await supabase.from('articles').select('id').eq('slug', slug).maybeSingle()
+        if (slugCollision) {
+          slug = `${slug}-${Date.now().toString(36)}`
+        }
+
+        const { data: inserted, error: insertError } = await supabase
+          .from('articles')
+          .insert({
+            title: parsed.title,
+            slug,
+            excerpt: parsed.excerpt,
+            content: parsed.content,
+            status: 'draft',
+            topic_angle: topic,
+            featured_cards: parsed.featured_cards ?? [],
+          })
+          .select()
+          .single()
+
+        if (insertError) {
+          console.error('[generate] insert error', insertError)
+          return jsonResponse({ error: insertError.message }, 500)
+        }
+
+        console.log('[generate] inserted', { id: inserted?.id, slug })
+      } catch (err) {
+        console.error('[generate] fatal', err)
       }
+    })(),
+  )
 
-      anthropicData = await anthropicResponse.json()
-
-      if (anthropicData?.stop_reason !== 'pause_turn') break
-
-      anthropicMessages.push({ role: 'assistant', content: anthropicData?.content })
-    }
-
-    const textBlocks = (anthropicData?.content ?? []).filter((b) => b.type === 'text' && b.text)
-    const textBlock = textBlocks[textBlocks.length - 1]
-    if (!textBlock?.text) {
-      return jsonResponse({ error: 'Réponse Anthropic sans contenu texte.' }, 502)
-    }
-
-    const parsed = extractJson(textBlock.text) as {
-      title: string
-      excerpt: string
-      content: string
-      featured_cards?: string[]
-    }
-
-    let slug = slugify(parsed.title)
-    const { data: slugCollision } = await supabase.from('articles').select('id').eq('slug', slug).maybeSingle()
-    if (slugCollision) {
-      slug = `${slug}-${Date.now().toString(36)}`
-    }
-
-    const { data: inserted, error: insertError } = await supabase
-      .from('articles')
-      .insert({
-        title: parsed.title,
-        slug,
-        excerpt: parsed.excerpt,
-        content: parsed.content,
-        status: 'draft',
-        topic_angle: topic,
-        featured_cards: parsed.featured_cards ?? [],
-      })
-      .select()
-      .single()
-
-    if (insertError) {
-      return jsonResponse({ error: insertError.message }, 500)
-    }
-
-    return jsonResponse({ article: inserted })
-  } catch (err) {
-    return jsonResponse({ error: err instanceof Error ? err.message : 'Erreur inconnue.' }, 500)
-  }
+  return jsonResponse({ status: 'accepted' }, 202)
 })

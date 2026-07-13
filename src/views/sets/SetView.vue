@@ -112,8 +112,8 @@ usePageSeo({
       </div>
     </div>
 
-    <div class="mb-6 flex flex-wrap items-center gap-3">
-      <CardFilters v-model="filters" class="flex-1" />
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <CardFilters v-model="filters" class="w-full sm:flex-1" />
       <label v-if="userId" class="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
         <Checkbox :model-value="missingOnly" @update:model-value="(v) => (missingOnly = !!v)" />
         Cartes manquantes uniquement

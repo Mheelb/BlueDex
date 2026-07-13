@@ -16,7 +16,12 @@ import QueryState from '@/components/common/QueryState.vue'
 import Heading from '@/components/common/Heading.vue'
 import TextLink from '@/components/common/TextLink.vue'
 
-usePageSeo({ path: '/' })
+usePageSeo({
+  title: 'Base de données et deck builder Blue Rising',
+  description:
+    'BlueDex : la base de données et le deck builder communautaires du TCG Blue Rising (Karmine Corp). Parcours tous les sets et cartes, construis tes decks et suis l’actu du jeu.',
+  path: '/',
+})
 
 const {
   data: sets,
@@ -215,4 +220,25 @@ function goToArticleSlide(index: number) {
       </div>
     </div>
   </QueryState>
+
+  <section class="mt-9 rounded-md border border-primary/30 bg-card p-6 sm:p-9">
+    <Heading as="h2" size="lg" class="mb-5 font-engraved text-foreground">À propos de BlueDex</Heading>
+    <div class="space-y-4 text-sm leading-relaxed text-muted-foreground">
+      <p>
+        <strong class="text-foreground">BlueDex</strong> est la base de données communautaire dédiée à
+        <strong class="text-foreground">Blue Rising</strong>, le jeu de cartes à collectionner (TCG) porté par la
+        Karmine Corp et Kameto. Retrouve l’intégralité des
+        <RouterLink :to="{ name: 'sets' }" class="text-gold-bright hover:underline">sets et des cartes</RouterLink>
+        du jeu — avec leurs effets, factions et raretés — dans une interface pensée pour les joueurs et les
+        collectionneurs.
+      </p>
+      <p>
+        Notre
+        <RouterLink :to="{ name: 'deck-builder' }" class="text-gold-bright hover:underline">deck builder</RouterLink>
+        te permet de construire tes decks Blue Rising, de les partager avec la communauté et de t’inspirer des créations
+        des autres joueurs. Suis aussi l’actualité du jeu — nouvelles cartes, factions et stratégies — dans notre
+        rubrique <RouterLink :to="{ name: 'articles' }" class="text-gold-bright hover:underline">articles</RouterLink>.
+      </p>
+    </div>
+  </section>
 </template>

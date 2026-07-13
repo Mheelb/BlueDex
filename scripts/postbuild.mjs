@@ -36,8 +36,6 @@ loadDotEnv('.env')
 
 const SITE_URL = (process.env.VITE_SITE_URL || 'https://bluedex.fr').replace(/\/$/, '')
 const SITE_NAME = 'BlueDex'
-const DEFAULT_DESCRIPTION =
-  'BlueDex, la base de données communautaire du jeu de cartes à collectionner Blue Rising : parcours les sets, filtre les cartes et prépare tes decks.'
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY
@@ -164,6 +162,18 @@ function applyToTemplate(template, { fullTitle, description, tags }, bodyHtml) {
     html = html.replace('<div id="app"></div>', `<div id="app">${bodyHtml}</div>`)
   }
   return html
+}
+
+function homeBody() {
+  return [
+    '<main>',
+    '<h1>BlueDex — Base de données et deck builder Blue Rising</h1>',
+    '<h2>À propos de BlueDex</h2>',
+    '<p>BlueDex est la base de données communautaire dédiée à Blue Rising, le jeu de cartes à collectionner (TCG) porté par la Karmine Corp et Kameto. Retrouve l’intégralité des sets et des cartes du jeu, avec leurs effets, factions et raretés, dans une interface pensée pour les joueurs et les collectionneurs.</p>',
+    '<p>Notre deck builder te permet de construire tes decks Blue Rising, de les partager avec la communauté et de t’inspirer des créations des autres joueurs. Suis aussi l’actualité du jeu, nouvelles cartes, factions et stratégies, dans notre rubrique articles.</p>',
+    '<p><a href="/sets">Tous les sets</a> · <a href="/decks">Deck builder</a> · <a href="/actus">Articles</a></p>',
+    '</main>',
+  ].join('\n')
 }
 
 function articleBody(article, contentHtml) {
@@ -387,8 +397,10 @@ async function main() {
   const staticPages = [
     {
       path: '/',
-      titleOverride: `${SITE_NAME} — La base de données communautaire de Blue Rising`,
-      description: DEFAULT_DESCRIPTION,
+      title: 'Base de données et deck builder Blue Rising',
+      description:
+        'BlueDex : la base de données et le deck builder communautaires du TCG Blue Rising (Karmine Corp). Parcours tous les sets et cartes, construis tes decks et suis l’actu du jeu.',
+      body: homeBody(),
     },
     {
       path: '/actus',
@@ -397,12 +409,12 @@ async function main() {
     },
     {
       path: '/sets',
-      title: 'Sets',
+      title: 'Tous les sets Blue Rising',
       description: 'Tous les sets de Blue Rising : parcours les cartes, filtre-les et prépare tes decks.',
     },
     {
       path: '/decks',
-      title: 'Decks',
+      title: 'Deck Builder Blue Rising',
       description: 'Construis et explore des decks Blue Rising à partir de la base de cartes communautaire.',
     },
   ]
@@ -416,7 +428,7 @@ async function main() {
       description: page.description,
       canonical,
     })
-    const html = applyToTemplate(template, head)
+    const html = applyToTemplate(template, head, page.body)
     if (page.path === '/') writeFileSync(templatePath, html)
     else writeHtml(page.path, html)
     staticCount++

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { renderMarkdown } from '@/lib/markdown'
+import { useInternalLinkNav } from '@/composables/useInternalLinkNav'
 import { articleKeys, fetchArticleBySlug } from '@/queries/articles'
 import { SITE_NAME, SITE_URL, absoluteUrl, usePageSeo, useJsonLd } from '@/lib/seo'
 import BackButton from '@/components/common/BackButton.vue'
@@ -20,6 +21,9 @@ const {
 })
 
 const contentHtml = computed(() => (article.value ? renderMarkdown(article.value.content) : ''))
+
+// Navigation SPA pour les liens internes du contenu (rendu via v-html).
+const onContentClick = useInternalLinkNav()
 
 usePageSeo({
   title: () => article.value?.title,
@@ -74,7 +78,7 @@ function formatDate(date: string | null) {
       />
 
       <!-- eslint-disable-next-line vue/no-v-html -- contentHtml is sanitized via DOMPurify in renderMarkdown -->
-      <div class="prose prose-invert mt-8 max-w-none" v-html="contentHtml" />
+      <div class="prose prose-invert mt-8 max-w-none" @click="onContentClick" v-html="contentHtml" />
     </template>
   </QueryState>
 </template>

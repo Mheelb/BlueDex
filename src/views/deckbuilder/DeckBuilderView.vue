@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
 import { PlusIcon } from '@lucide/vue'
 import { useAuthUser } from '@/composables/useAuthUser'
+import { SITE_NAME, SITE_URL, usePageSeo, useJsonLd } from '@/lib/seo'
 import type { DeckListQuery } from '@/types/deck'
 import { createEmptyDeckListQuery } from '@/types/deck'
 import {
@@ -24,6 +25,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import DeckTable from '@/components/deckbuilder/DeckTable.vue'
 import DeckListControls from '@/components/deckbuilder/DeckListControls.vue'
+
+usePageSeo({
+  title: 'Deck Builder Blue Rising',
+  description:
+    'Le deck builder Blue Rising : assemble tes cartes, respecte les règles du format et partage tes decks avec la communauté du TCG de la Karmine.',
+  path: '/decks',
+})
+
+useJsonLd({
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Deck Builder Blue Rising',
+  applicationCategory: 'GameApplication',
+  operatingSystem: 'Web',
+  url: `${SITE_URL}/decks`,
+  description: 'Construis, partage et explore des decks du jeu de cartes à collectionner Blue Rising.',
+  isPartOf: { '@type': 'WebSite', name: SITE_NAME, url: SITE_URL },
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+})
 
 const { session } = useAuthUser()
 const queryClient = useQueryClient()

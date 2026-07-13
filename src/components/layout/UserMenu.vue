@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { LayoutDashboardIcon, LogOutIcon, NewspaperIcon } from '@lucide/vue'
+import { LayoutDashboardIcon, LibraryIcon, LogOutIcon, NewspaperIcon } from '@lucide/vue'
 import { useAuthUser } from '@/composables/useAuthUser'
 import { useProfile } from '@/composables/useProfile'
 import { supabase } from '@/lib/supabase'
@@ -45,6 +45,13 @@ async function onLogout() {
       <DropdownMenuLabel class="truncate font-normal text-muted-foreground">
         {{ profile?.display_name ?? session.user.email }}
       </DropdownMenuLabel>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem as-child>
+        <RouterLink :to="{ name: 'collection' }">
+          <LibraryIcon />
+          Ma collection
+        </RouterLink>
+      </DropdownMenuItem>
       <DropdownMenuSeparator />
       <template v-if="isAdmin">
         <DropdownMenuItem as-child>

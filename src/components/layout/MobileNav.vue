@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { MenuIcon } from '@lucide/vue'
 import { isTabActive, navTabs } from './navTabs'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 
 const route = useRoute()
 const open = ref(false)
@@ -20,6 +20,7 @@ const open = ref(false)
     <SheetContent side="left" class="w-64 border-primary/35 bg-card p-0">
       <SheetHeader>
         <SheetTitle class="font-blackletter text-2xl text-foreground">BlueDex</SheetTitle>
+        <SheetDescription class="sr-only">Menu de navigation principal</SheetDescription>
       </SheetHeader>
       <nav class="flex flex-col gap-1 px-4 pb-4">
         <RouterLink

@@ -101,7 +101,7 @@ const table = useVueTable({
 
         <div class="min-w-0 flex-1">
           <RouterLink
-            :to="{ name: 'deck-builder-edit', params: { deckId: row.original.id } }"
+            :to="{ name: 'deck-detail', params: { deckId: row.original.id } }"
             class="truncate font-medium hover:underline"
           >
             {{ row.original.name }}

@@ -21,22 +21,45 @@ export interface DeckWithCards {
   entries: DeckEntry[]
 }
 
-export async function fetchDeckWithCards(deckId: string): Promise<DeckWithCards> {
-  const { data: deck, error: deckError } = await supabase.from('decks').select('*').eq('id', deckId).single()
-  if (deckError || !deck) throw new Error(deckError?.message ?? 'Deck introuvable.')
-
+async function fetchDeckEntries(deckId: string): Promise<DeckEntry[]> {
   const { data: rows, error: cardsError } = await supabase
     .from('deck_cards')
     .select('quantity, card:cards(*)')
     .eq('deck_id', deckId)
   if (cardsError) throw new Error(cardsError.message)
 
-  const entries: DeckEntry[] = (rows ?? []).map((row) => ({
+  return (rows ?? []).map((row) => ({
     card: row.card as unknown as Card,
     quantity: row.quantity,
   }))
+}
 
-  return { deck: deck as Deck, entries }
+export async function fetchDeckWithCards(deckId: string): Promise<DeckWithCards> {
+  const { data: deck, error: deckError } = await supabase.from('decks').select('*').eq('id', deckId).single()
+  if (deckError || !deck) throw new Error(deckError?.message ?? 'Deck introuvable.')
+
+  return { deck: deck as Deck, entries: await fetchDeckEntries(deckId) }
+}
+
+export interface DeckDetail {
+  deck: Deck
+  author: { display_name: string; avatar_url: string | null } | null
+  entries: DeckEntry[]
+}
+
+export async function fetchDeckDetail(deckId: string): Promise<DeckDetail> {
+  const { data, error } = await supabase
+    .from('decks')
+    .select('*, author:profiles(display_name, avatar_url)')
+    .eq('id', deckId)
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Deck introuvable.')
+
+  const { author, ...deck } = data as Deck & {
+    author: { display_name: string; avatar_url: string | null } | null
+  }
+
+  return { deck: deck as Deck, author: author ?? null, entries: await fetchDeckEntries(deckId) }
 }
 
 export async function saveDeck(

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useVueTable, getCoreRowModel, type ColumnDef, type Updater, type PaginationState } from '@tanstack/vue-table'
-import { BookmarkIcon, ChevronLeftIcon, ChevronRightIcon, LayersIcon } from '@lucide/vue'
+import { BookmarkIcon, LayersIcon } from '@lucide/vue'
 import type { DeckFormat } from '@/types/deck'
 import type { DeckListItem } from '@/types/deck'
 import { DECK_FORMAT_LABELS } from '@/types/deck'
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import QueryState from '@/components/common/QueryState.vue'
 import BrandStar from '@/components/common/BrandStar.vue'
+import Pagination from '@/components/common/Pagination.vue'
 
 const props = defineProps<{
   rows: DeckListItem[]
@@ -100,7 +101,7 @@ const table = useVueTable({
 
         <div class="min-w-0 flex-1">
           <RouterLink
-            :to="{ name: 'deck-builder-edit', params: { deckId: row.original.id } }"
+            :to="{ name: 'deck-detail', params: { deckId: row.original.id } }"
             class="truncate font-medium hover:underline"
           >
             {{ row.original.name }}
@@ -148,24 +149,11 @@ const table = useVueTable({
       </div>
     </div>
 
-    <div v-if="pageCount > 1" class="mt-3 flex items-center justify-center gap-3">
-      <Button
-        variant="outline"
-        size="icon"
-        :disabled="pageIndex === 0"
-        @click="emit('update:pageIndex', pageIndex - 1)"
-      >
-        <ChevronLeftIcon />
-      </Button>
-      <span class="text-sm text-muted-foreground">Page {{ pageIndex + 1 }} / {{ pageCount }}</span>
-      <Button
-        variant="outline"
-        size="icon"
-        :disabled="pageIndex >= pageCount - 1"
-        @click="emit('update:pageIndex', pageIndex + 1)"
-      >
-        <ChevronRightIcon />
-      </Button>
-    </div>
+    <Pagination
+      :page="pageIndex"
+      :page-count="pageCount"
+      class="mt-3"
+      @update:page="(value) => emit('update:pageIndex', value)"
+    />
   </QueryState>
 </template>

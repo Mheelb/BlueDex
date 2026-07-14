@@ -2,9 +2,11 @@
 import { ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useForm } from '@tanstack/vue-form'
-import { PencilIcon, SparklesIcon, Trash2Icon } from '@lucide/vue'
+import { PencilIcon, SparklesIcon, Trash2Icon, UploadIcon } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import { supabase } from '@/lib/supabase'
+import { convertImageToWebP } from '@/lib/imageCompression'
+import { deleteArticleImage, uploadArticleImage } from '@/lib/articleImageStorage'
 import type { Article } from '@/types/article'
 import { articleKeys, fetchAdminArticles } from '@/queries/articles'
 import { required } from '@/lib/formValidators'
@@ -32,6 +34,10 @@ const { data: articles, isPending: loading } = useQuery({
 const error = ref<string | null>(null)
 const sheetOpen = ref(false)
 const editingId = ref<string | null>(null)
+const editingImageUrl = ref<string | null>(null)
+const imageFile = ref<File | null>(null)
+const converting = ref(false)
+const fileInputEl = ref<HTMLInputElement | null>(null)
 
 function emptyForm() {
   return {
@@ -39,8 +45,26 @@ function emptyForm() {
     slug: '',
     excerpt: '',
     content: '',
-    cover_image_url: '',
   }
+}
+
+async function onFileChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0] ?? null
+  if (!file) {
+    imageFile.value = null
+    return
+  }
+
+  converting.value = true
+  try {
+    imageFile.value = await convertImageToWebP(file, 1)
+  } finally {
+    converting.value = false
+  }
+}
+
+function triggerFileInput() {
+  fileInputEl.value?.click()
 }
 
 const generateSheetOpen = ref(false)
@@ -81,6 +105,15 @@ function onGenerate() {
 
 const saveMutation = useMutation({
   mutationFn: async (value: ReturnType<typeof emptyForm>) => {
+    if (!editingId.value) throw new Error('Article introuvable.')
+
+    let cover_image_url: string | undefined
+
+    if (imageFile.value) {
+      const path = `${value.slug}-${Date.now()}-${imageFile.value.name}`
+      cover_image_url = await uploadArticleImage(path, imageFile.value)
+    }
+
     const { error: saveError } = await supabase
       .from('articles')
       .update({
@@ -88,11 +121,15 @@ const saveMutation = useMutation({
         slug: value.slug,
         excerpt: value.excerpt,
         content: value.content,
-        cover_image_url: value.cover_image_url || null,
+        ...(cover_image_url ? { cover_image_url } : {}),
       })
       .eq('id', editingId.value)
 
     if (saveError) throw new Error(saveError.message)
+
+    if (cover_image_url && editingImageUrl.value) {
+      await deleteArticleImage(editingImageUrl.value)
+    }
   },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: articleKeys.all })
@@ -114,8 +151,11 @@ const form = useForm({
 
 function resetForm() {
   editingId.value = null
+  editingImageUrl.value = null
   form.reset(emptyForm())
+  imageFile.value = null
   error.value = null
+  if (fileInputEl.value) fileInputEl.value.value = ''
 }
 
 const validateExcerpt = required("L'extrait est requis.")
@@ -123,12 +163,12 @@ const validateExcerpt = required("L'extrait est requis.")
 function openEditSheet(article: Article) {
   resetForm()
   editingId.value = article.id
+  editingImageUrl.value = article.cover_image_url
   form.reset({
     title: article.title,
     slug: article.slug,
     excerpt: article.excerpt,
     content: article.content,
-    cover_image_url: article.cover_image_url ?? '',
   })
   sheetOpen.value = true
 }
@@ -318,16 +358,20 @@ function onDelete(article: Article) {
               />
             </FormField>
           </form.Field>
-          <form.Field v-slot="{ field }" name="cover_image_url">
-            <FormField label="URL de l'image de couverture" for="article-cover">
-              <Input
-                id="article-cover"
-                :model-value="field.state.value"
-                placeholder="Optionnel"
-                @update:model-value="(v) => field.handleChange(String(v))"
-              />
-            </FormField>
-          </form.Field>
+          <FormField
+            :label="`Image de couverture${editingImageUrl ? ' (laisser vide pour garder l’actuelle)' : ' (optionnel)'}`"
+          >
+            <input ref="fileInputEl" type="file" accept="image/*" class="hidden" @change="onFileChange" />
+            <div class="flex items-center gap-2">
+              <Button type="button" variant="outline" size="sm" :disabled="converting" @click="triggerFileInput">
+                <UploadIcon />
+                Importer
+              </Button>
+              <span class="truncate text-sm text-muted-foreground">
+                {{ converting ? 'Compression...' : (imageFile?.name ?? 'Aucun fichier sélectionné') }}
+              </span>
+            </div>
+          </FormField>
           <form.Field v-slot="{ field }" name="content" :validators="{ onChange: required('Le contenu est requis.') }">
             <FormField label="Contenu (markdown)" for="article-content" required :error="field.state.meta.errors[0]">
               <Textarea
@@ -346,7 +390,7 @@ function onDelete(article: Article) {
         <SheetFooter>
           <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
           <div class="flex gap-3">
-            <Button type="submit" :disabled="saveMutation.isPending.value">
+            <Button type="submit" :disabled="saveMutation.isPending.value || converting">
               {{ saveMutation.isPending.value ? 'Enregistrement...' : 'Enregistrer' }}
             </Button>
             <Button type="button" variant="ghost" @click="sheetOpen = false">Annuler</Button>

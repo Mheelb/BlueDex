@@ -104,4 +104,47 @@ function onPointerLeave() {
 .card-tile--holo.card-tile--hovering .card-tile__holo-shine {
   opacity: 0.65;
 }
+
+/* Mobile : le tilt au toucher n'a pas de sens (pas de vrai hover), et
+   laisser le doigt déclencher l'effet est peu fiable. On désactive le tilt
+   et on remplace le holo par un liseret qui balaie la carte automatiquement. */
+@media (max-width: 639.98px) {
+  .card-tile,
+  .card-tile--hovering {
+    transition: none;
+    transform: none;
+  }
+
+  .card-tile--holo .card-tile__holo-shine {
+    opacity: 0.55;
+    background: linear-gradient(
+      115deg,
+      transparent 20%,
+      rgba(255, 143, 168, 0.55) 35%,
+      rgba(255, 216, 143, 0.55) 42%,
+      rgba(143, 198, 255, 0.55) 49%,
+      rgba(143, 255, 192, 0.55) 56%,
+      transparent 70%
+    );
+    background-size: 250% 250%;
+    animation: card-tile-holo-sweep 3.5s ease-in-out infinite;
+  }
+}
+
+@keyframes card-tile-holo-sweep {
+  0%,
+  100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+}
+
+@media (max-width: 639.98px) and (prefers-reduced-motion: reduce) {
+  .card-tile--holo .card-tile__holo-shine {
+    animation: none;
+    background-position: 50% 50%;
+  }
+}
 </style>

@@ -42,6 +42,17 @@ describe('filterAndSortCards', () => {
     expect(result.map((c) => c.name)).toEqual(['Aldric'])
   })
 
+  it('filters by search query on name, accent-insensitive', () => {
+    const accentedCards = [...cards, makeCard({ number: '004', name: 'Éclaireur' })]
+
+    expect(
+      filterAndSortCards(accentedCards, { ...createEmptyCardFilters(), search: 'eclaireur' }).map((c) => c.name),
+    ).toEqual(['Éclaireur'])
+    expect(
+      filterAndSortCards(accentedCards, { ...createEmptyCardFilters(), search: 'éclaireur' }).map((c) => c.name),
+    ).toEqual(['Éclaireur'])
+  })
+
   it('filters by type facet', () => {
     const filters = { ...createEmptyCardFilters(), type: ['Objet' as const] }
     const result = filterAndSortCards(cards, filters)

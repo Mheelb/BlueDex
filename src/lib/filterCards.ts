@@ -1,6 +1,15 @@
 import type { Card, CardFilters } from '@/types/card'
 import { COST_RANGE, POWER_RANGE, SUPPORT_RANGE } from '@/types/card'
 
+// Insensible aux accents en plus de la casse : une recherche "eclaireur" doit
+// aussi trouver "Éclaireur".
+function normalizeSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+}
+
 function matchesRange(value: number | null, range: [number, number], fullRange: readonly [number, number]) {
   const [min, max] = range
   if (min <= fullRange[0] && max >= fullRange[1]) return true
@@ -20,10 +29,10 @@ function compareNumbers(a: string, b: string) {
 }
 
 export function filterAndSortCards<T extends Card>(cards: T[], filters: CardFilters): T[] {
-  const query = filters.search.trim().toLowerCase()
+  const query = normalizeSearch(filters.search.trim())
 
   const result = cards.filter((card) => {
-    if (query && !card.name.toLowerCase().includes(query)) return false
+    if (query && !normalizeSearch(card.name).includes(query)) return false
     if (!matchesFacet(card.rarity, filters.rarity)) return false
     if (!matchesFacet(card.type, filters.type)) return false
     if (!matchesFacet(card.subtype, filters.subtype)) return false

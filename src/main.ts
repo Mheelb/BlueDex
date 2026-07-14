@@ -12,7 +12,10 @@ import './style.css'
 import App from './App.vue'
 import router from './router'
 import { queryClient } from './lib/queryClient'
+import { initAnalytics } from './lib/analytics'
 
 const head = createHead()
 
 createApp(App).use(head).use(router).use(VueQueryPlugin, { queryClient }).mount('#app')
+
+initAnalytics()

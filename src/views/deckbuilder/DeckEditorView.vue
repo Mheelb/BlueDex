@@ -23,7 +23,9 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import PageHeader from '@/components/common/PageHeader.vue'
+import Pagination from '@/components/common/Pagination.vue'
 import QueryState from '@/components/common/QueryState.vue'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const props = defineProps<{ deckId?: string }>()
 
@@ -97,8 +99,22 @@ const { data: allCards, isPending: catalogueLoading } = useQuery({
   queryFn: fetchAllCardsWithSet,
 })
 
+const mobilePanel = ref<'catalogue' | 'deck'>('catalogue')
+
 const filters = ref(createEmptyCardFilters())
 const filteredCards = computed(() => filterAndSortCards(allCards.value ?? [], filters.value))
+
+const CATALOG_PAGE_SIZE = 20
+const catalogPage = ref(0)
+const catalogPageCount = computed(() => Math.max(1, Math.ceil(filteredCards.value.length / CATALOG_PAGE_SIZE)))
+const paginatedCards = computed(() => {
+  const start = catalogPage.value * CATALOG_PAGE_SIZE
+  return filteredCards.value.slice(start, start + CATALOG_PAGE_SIZE)
+})
+
+watch(filters, () => {
+  catalogPage.value = 0
+})
 
 function findEntry(cardId: string) {
   return entries.value.find((e) => e.card.id === cardId)
@@ -225,8 +241,15 @@ function onExport() {
       version.
     </p>
 
+    <Tabs v-model="mobilePanel" class="gap-4 lg:hidden mb-5">
+      <TabsList class="w-full">
+        <TabsTrigger value="catalogue" class="flex-1">Catalogue</TabsTrigger>
+        <TabsTrigger value="deck" class="flex-1">Mon deck ({{ totalCards }})</TabsTrigger>
+      </TabsList>
+    </Tabs>
+
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
-      <div>
+      <div :class="mobilePanel === 'catalogue' ? 'block' : 'hidden'" class="lg:block">
         <CardFilters v-model="filters" class="mb-4" />
         <QueryState
           :loading="catalogueLoading"
@@ -234,21 +257,30 @@ function onExport() {
           empty-message="Aucune carte ne correspond aux filtres."
         >
           <div class="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-4 md:grid-cols-5">
-            <div v-for="card in filteredCards" :key="card.id">
+            <div v-for="card in paginatedCards" :key="card.id">
               <DeckBuilderCardTile
                 :card="card"
                 :quantity="quantityInDeck(card.id)"
                 :disabled="readOnly || isCardDisabled(card)"
                 :draggable="!readOnly"
+                :show-remove-action="!readOnly"
                 @click="addCard(card)"
+                @remove="removeCard(card.id)"
               />
               <p class="mt-1 truncate text-center text-[10px] text-muted-foreground">{{ card.set.name }}</p>
             </div>
           </div>
+
+          <Pagination v-model:page="catalogPage" :page-count="catalogPageCount" class="mt-4" />
         </QueryState>
       </div>
 
-      <div class="flex h-fit flex-col gap-4 rounded-xl border bg-card p-4" @dragover.prevent @drop="onDrop">
+      <div
+        class="h-fit flex-col gap-4 rounded-xl border bg-card p-4 lg:flex"
+        :class="mobilePanel === 'deck' ? 'flex' : 'hidden'"
+        @dragover.prevent
+        @drop="onDrop"
+      >
         <Input v-model="deckName" placeholder="Nom du deck" :disabled="readOnly" />
         <SelectField v-model="format" :options="formatOptions" :disabled="readOnly" />
         <label class="flex items-center gap-2 text-sm">
@@ -296,9 +328,11 @@ function onExport() {
 
         <div v-if="costCurve.length > 0" class="flex flex-col gap-2">
           <p class="text-xs font-medium text-muted-foreground">Courbe de coût</p>
-          <div class="flex h-16 items-end gap-1">
+          <div class="flex gap-1">
             <div v-for="[cost, count] in costCurve" :key="cost" class="flex flex-1 flex-col items-center gap-1">
-              <div class="w-full rounded-t bg-primary" :style="{ height: `${(count / maxCostCount) * 100}%` }" />
+              <div class="flex h-16 w-full items-end">
+                <div class="w-full rounded-t bg-primary" :style="{ height: `${(count / maxCostCount) * 100}%` }" />
+              </div>
               <span class="text-[10px] text-muted-foreground">{{ cost }}</span>
             </div>
           </div>

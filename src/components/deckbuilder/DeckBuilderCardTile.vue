@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { StarIcon } from '@lucide/vue'
+import { MinusIcon, StarIcon } from '@lucide/vue'
 import type { Card } from '@/types/card'
 import CardImage from '@/components/cards/CardImage.vue'
 
@@ -9,11 +9,13 @@ const props = defineProps<{
   disabled?: boolean
   draggable?: boolean
   showCoverAction?: boolean
+  showRemoveAction?: boolean
   isCover?: boolean
 }>()
 
 const emit = defineEmits<{
   click: []
+  remove: []
   'set-cover': []
 }>()
 
@@ -40,10 +42,20 @@ function onDragStart(event: DragEvent) {
 
       <span
         v-if="quantity"
-        class="absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow"
+        class="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground shadow"
       >
         ×{{ quantity }}
       </span>
+
+      <button
+        v-if="showRemoveAction && quantity"
+        type="button"
+        class="absolute -left-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-card text-muted-foreground shadow transition-colors hover:text-destructive"
+        title="Retirer un exemplaire"
+        @click.stop="emit('remove')"
+      >
+        <MinusIcon class="size-3" />
+      </button>
 
       <button
         v-if="showCoverAction"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { CardFilters } from '@/types/card'
+import type { Card as CardModel, CardFilters } from '@/types/card'
 import { CARD_TYPES, COST_RANGE, FACTIONS, POWER_RANGE, RARITIES, SUBTYPES, SUPPORT_RANGE } from '@/types/card'
 import SearchInput from '@/components/form/SearchInput.vue'
 import SelectField from '@/components/form/SelectField.vue'
@@ -14,6 +14,7 @@ import { FilterIcon } from '@lucide/vue'
 
 const props = defineProps<{
   modelValue: CardFilters
+  cards?: CardModel[]
 }>()
 
 const emit = defineEmits<{
@@ -24,7 +25,7 @@ function update<K extends keyof CardFilters>(key: K, value: CardFilters[K]) {
   emit('update:modelValue', { ...props.modelValue, [key]: value })
 }
 
-function facetProxy<K extends 'rarity' | 'type' | 'subtype' | 'faction'>(key: K) {
+function facetProxy<K extends 'rarity' | 'type' | 'subtype' | 'faction' | 'artist'>(key: K) {
   return computed({
     get: () => props.modelValue[key],
     set: (value: string[]) => update(key, value as CardFilters[K]),
@@ -40,6 +41,7 @@ const rarity = facetProxy('rarity')
 const type = facetProxy('type')
 const subtype = facetProxy('subtype')
 const faction = facetProxy('faction')
+const artist = facetProxy('artist')
 
 const sort = computed({
   get: () => props.modelValue.sort,
@@ -66,6 +68,14 @@ const typeOptions = toOptions(CARD_TYPES)
 const subtypeOptions = toOptions(SUBTYPES)
 const factionOptions = toOptions(FACTIONS)
 
+const artistOptions = computed(() => {
+  const artists = new Set<string>()
+  for (const card of props.cards ?? []) {
+    if (card.artist) artists.add(card.artist)
+  }
+  return toOptions([...artists].sort((a, b) => a.localeCompare(b)))
+})
+
 const sortOptions: SelectFieldOption[] = [
   { value: 'number-asc', label: 'Numéro croissant' },
   { value: 'number-desc', label: 'Numéro décroissant' },
@@ -83,6 +93,7 @@ const sortOptions: SelectFieldOption[] = [
       <MultiSelectField v-model="type" :options="typeOptions" placeholder="Type" class="hidden md:flex" />
       <MultiSelectField v-model="subtype" :options="subtypeOptions" placeholder="Sous-type" class="hidden md:flex" />
       <MultiSelectField v-model="faction" :options="factionOptions" placeholder="Faction" class="hidden md:flex" />
+      <MultiSelectField v-model="artist" :options="artistOptions" placeholder="Illustrateur" class="hidden md:flex" />
       <SelectField v-model="sort" :options="sortOptions" class="hidden md:flex" />
 
       <Popover>
@@ -98,6 +109,7 @@ const sortOptions: SelectFieldOption[] = [
             <MultiSelectField v-model="type" :options="typeOptions" placeholder="Type" />
             <MultiSelectField v-model="subtype" :options="subtypeOptions" placeholder="Sous-type" />
             <MultiSelectField v-model="faction" :options="factionOptions" placeholder="Faction" />
+            <MultiSelectField v-model="artist" :options="artistOptions" placeholder="Illustrateur" />
             <SelectField v-model="sort" :options="sortOptions" />
           </div>
 

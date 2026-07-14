@@ -283,7 +283,7 @@ function onDelete(card: Card) {
   </PageHeader>
 
   <QueryState :loading="loading" :error="loadError">
-    <CardFilters v-model="filters" class="mb-4" />
+    <CardFilters v-model="filters" :cards="cards" class="mb-4" />
 
     <QueryState :empty="filteredCards.length === 0" empty-message="Aucune carte ne correspond aux filtres.">
       <div class="flex flex-col gap-2">

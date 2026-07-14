@@ -37,6 +37,7 @@ export function filterAndSortCards<T extends Card>(cards: T[], filters: CardFilt
     if (!matchesFacet(card.type, filters.type)) return false
     if (!matchesFacet(card.subtype, filters.subtype)) return false
     if (!matchesFacet(card.faction, filters.faction)) return false
+    if (!matchesFacet(card.artist, filters.artist)) return false
     if (!matchesRange(card.cost, filters.costRange, COST_RANGE)) return false
     if (!matchesRange(card.power, filters.powerRange, POWER_RANGE)) return false
     if (!matchesRange(card.support, filters.supportRange, SUPPORT_RANGE)) return false

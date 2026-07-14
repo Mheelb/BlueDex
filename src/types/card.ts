@@ -72,6 +72,7 @@ export interface CardFilters {
   type: CardType[]
   subtype: Subtype[]
   faction: Faction[]
+  artist: string[]
   sort: CardSort
   costRange: [number, number]
   powerRange: [number, number]
@@ -85,6 +86,7 @@ export function createEmptyCardFilters(): CardFilters {
     type: [],
     subtype: [],
     faction: [],
+    artist: [],
     sort: 'number-asc',
     costRange: [COST_RANGE[0], COST_RANGE[1]],
     powerRange: [POWER_RANGE[0], POWER_RANGE[1]],

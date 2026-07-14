@@ -104,6 +104,14 @@ async function fetchSets() {
   return supabaseGet('sets?select=slug,name,symbol_url,card_count,release_date&order=release_date.desc')
 }
 
+async function fetchPublicDecks() {
+  return supabaseGet(
+    'decks?is_public=eq.true&select=id,name,format,updated_at,cover_card:cards!cover_card_id(image_url,name),author:profiles(display_name),deck_cards(quantity,card:cards(name,number,set:sets(slug)))&order=updated_at.desc',
+  )
+}
+
+const DECK_FORMAT_LABELS = { normal: 'Normal', rapide: 'Rapide' }
+
 async function fetchCardsWithSet() {
   // Une carte est identifiée par (slug du set, numéro).
   return supabaseGet('cards?select=number,name,image_url,rarity,type,faction,effect,set:sets(slug,name,symbol_url)')
@@ -247,6 +255,30 @@ function cardBody(card, setName) {
     .join('\n')
 }
 
+function deckBody(deck) {
+  const author = deck.author?.display_name
+  const cards = (deck.deck_cards ?? [])
+    .map((dc) => ({ q: dc.quantity, name: dc.card?.name, number: dc.card?.number, slug: dc.card?.set?.slug }))
+    .filter((c) => c.name)
+  const list = cards
+    .map((c) => {
+      const label = `${c.q}× ${escapeHtml(c.name)}`
+      return c.slug && c.number
+        ? `<li><a href="/sets/${escapeAttr(c.slug)}/cards/${escapeAttr(c.number)}">${label}</a></li>`
+        : `<li>${label}</li>`
+    })
+    .join('\n')
+  return [
+    '<main>',
+    `<h1>${escapeHtml(deck.name)}</h1>`,
+    `<p>Deck ${escapeHtml(DECK_FORMAT_LABELS[deck.format] ?? deck.format)} Blue Rising${author ? ` par ${escapeHtml(author)}` : ''}.</p>`,
+    cards.length ? `<h2>Liste des cartes</h2>\n<ul>\n${list}\n</ul>` : '',
+    '</main>',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
 function writeHtml(routePath, html) {
   const file = resolve(distDir, `${routePath.replace(/^\//, '')}.html`)
   mkdirSync(dirname(file), { recursive: true })
@@ -271,7 +303,7 @@ function urlEntry({ loc, lastmod, changefreq, priority }) {
   return `  <url>\n${parts.join('\n')}\n  </url>`
 }
 
-function writeSitemap({ articles, sets, cards }) {
+function writeSitemap({ articles, sets, cards, decks }) {
   const entries = [
     ...staticRoutes.map((r) =>
       urlEntry({ loc: `${SITE_URL}${r.path}`, changefreq: r.changefreq, priority: r.priority }),
@@ -290,6 +322,14 @@ function writeSitemap({ articles, sets, cards }) {
       .map((c) =>
         urlEntry({ loc: `${SITE_URL}/sets/${c.set.slug}/cards/${c.number}`, changefreq: 'monthly', priority: '0.5' }),
       ),
+    ...decks.map((d) =>
+      urlEntry({
+        loc: `${SITE_URL}/decks/${d.id}`,
+        lastmod: d.updated_at?.slice(0, 10),
+        changefreq: 'weekly',
+        priority: '0.5',
+      }),
+    ),
   ]
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.join('\n')}\n</urlset>\n`
   writeFileSync(resolve(distDir, 'sitemap.xml'), xml)
@@ -308,8 +348,14 @@ async function main() {
   let articles = []
   let sets = []
   let cards = []
+  let decks = []
   try {
-    ;[articles, sets, cards] = await Promise.all([fetchPublishedArticles(), fetchSets(), fetchCardsWithSet()])
+    ;[articles, sets, cards, decks] = await Promise.all([
+      fetchPublishedArticles(),
+      fetchSets(),
+      fetchCardsWithSet(),
+      fetchPublicDecks(),
+    ])
   } catch (err) {
     console.warn(`[postbuild] Récupération des données échouée (${err.message}) — on continue avec ce qu'on a.`)
   }
@@ -395,6 +441,26 @@ async function main() {
     cardCount++
   }
 
+  let deckCount = 0
+  for (const deck of decks) {
+    const canonical = `${SITE_URL}/decks/${deck.id}`
+    const author = deck.author?.display_name
+    const cardTotal = (deck.deck_cards ?? []).reduce((sum, dc) => sum + (dc.quantity ?? 0), 0)
+    const head = buildHead({
+      title: `${deck.name} — Deck Blue Rising`,
+      description: `Deck ${DECK_FORMAT_LABELS[deck.format] ?? deck.format} Blue Rising${author ? ` par ${author}` : ''} — ${cardTotal} cartes. Découvre la liste complète sur BlueDex.`,
+      canonical,
+      image: deck.cover_card?.image_url ? absoluteUrl(deck.cover_card.image_url) : DEFAULT_OG_IMAGE,
+      jsonLd: breadcrumbLd([
+        { name: 'Accueil', path: '/' },
+        { name: 'Deck Builder', path: '/decks' },
+        { name: deck.name, path: `/decks/${deck.id}` },
+      ]),
+    })
+    writeHtml(`/decks/${deck.id}`, applyToTemplate(template, head, deckBody(deck)))
+    deckCount++
+  }
+
   // Pages statiques : la home est réécrite dans dist/index.html (qui sert aussi
   // de fallback SPA), les autres en fichiers plats. Cela donne à ces routes de
   // vraies balises OG dans le HTML servi aux bots (Discord/Twitter).
@@ -438,9 +504,9 @@ async function main() {
     staticCount++
   }
 
-  const sitemapCount = writeSitemap({ articles, sets, cards })
+  const sitemapCount = writeSitemap({ articles, sets, cards, decks })
   console.log(
-    `[postbuild] pré-rendu : ${staticCount} page(s) statique(s), ${articleCount} article(s), ${setCount} set(s), ${cardCount} carte(s) — sitemap: ${sitemapCount} URLs.`,
+    `[postbuild] pré-rendu : ${staticCount} page(s) statique(s), ${articleCount} article(s), ${setCount} set(s), ${cardCount} carte(s), ${deckCount} deck(s) — sitemap: ${sitemapCount} URLs.`,
   )
 }
 

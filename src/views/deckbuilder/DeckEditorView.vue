@@ -250,7 +250,7 @@ function onExport() {
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
       <div :class="mobilePanel === 'catalogue' ? 'block' : 'hidden'" class="lg:block">
-        <CardFilters v-model="filters" class="mb-4" />
+        <CardFilters v-model="filters" :cards="allCards" class="mb-4" />
         <QueryState
           :loading="catalogueLoading"
           :empty="filteredCards.length === 0"

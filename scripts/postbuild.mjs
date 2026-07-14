@@ -44,6 +44,10 @@ const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY
 // Doit rester synchro avec src/lib/cardSymbols.ts (CARD_SYMBOLS).
 const CARD_SYMBOLS = {
   rotation: '/symbols/rotation.png',
+  '0power': '/symbols/0power.svg',
+  '1power': '/symbols/1power.svg',
+  '0soutien': '/symbols/0soutien.svg',
+  '1soutien': '/symbols/1soutien.svg',
 }
 const SYMBOL_PATTERN = /:([a-z0-9_-]+):/gi
 const purify = DOMPurify(new JSDOM('').window)

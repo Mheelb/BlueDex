@@ -4,6 +4,10 @@
 // Pour ajouter un symbole : dépose le png dans public/symbols/ et ajoute une entrée ici.
 export const CARD_SYMBOLS: Record<string, string> = {
   rotation: '/symbols/rotation.png',
+  '0power': '/symbols/0power.svg',
+  '1power': '/symbols/1power.svg',
+  '0soutien': '/symbols/0soutien.svg',
+  '1soutien': '/symbols/1soutien.svg',
 }
 
 export interface EffectTextPart {

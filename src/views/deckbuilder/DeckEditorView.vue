@@ -14,6 +14,7 @@ import { deckExportFilename, formatDeckExport } from '@/lib/deckExport'
 import { useAuthUser } from '@/composables/useAuthUser'
 import { useDeckDraft } from '@/composables/useDeckDraft'
 import { cardKeys, fetchAllCardsWithSet } from '@/queries/cards'
+import { collectionKeys, fetchMyCollection } from '@/queries/collection'
 import { deckKeys, fetchDeckWithCards, saveDeck } from '@/queries/decks'
 import CardFilters from '@/components/cards/CardFilters.vue'
 import SelectField from '@/components/form/SelectField.vue'
@@ -32,6 +33,7 @@ const props = defineProps<{ deckId?: string }>()
 const router = useRouter()
 const queryClient = useQueryClient()
 const { session } = useAuthUser()
+const userId = computed(() => session.value?.user.id)
 
 const isEditing = computed(() => !!props.deckId)
 
@@ -101,8 +103,23 @@ const { data: allCards, isPending: catalogueLoading } = useQuery({
 
 const mobilePanel = ref<'catalogue' | 'deck'>('catalogue')
 
+const { data: collection } = useQuery({
+  queryKey: computed(() => collectionKeys.mine(userId.value ?? '')),
+  queryFn: () => fetchMyCollection(userId.value!),
+  enabled: computed(() => !!userId.value),
+})
+const collectionMap = computed(() => collection.value ?? new Map<string, number>())
+const ownedOnly = ref(false)
+
+function ownedQuantity(cardId: string) {
+  return collectionMap.value.get(cardId) ?? 0
+}
+
 const filters = ref(createEmptyCardFilters())
-const filteredCards = computed(() => filterAndSortCards(allCards.value ?? [], filters.value))
+const filteredCards = computed(() => {
+  const base = filterAndSortCards(allCards.value ?? [], filters.value)
+  return ownedOnly.value ? base.filter((card) => collectionMap.value.has(card.id)) : base
+})
 
 const CATALOG_PAGE_SIZE = 20
 const catalogPage = ref(0)
@@ -112,7 +129,7 @@ const paginatedCards = computed(() => {
   return filteredCards.value.slice(start, start + CATALOG_PAGE_SIZE)
 })
 
-watch(filters, () => {
+watch([filters, ownedOnly], () => {
   catalogPage.value = 0
 })
 
@@ -124,12 +141,16 @@ function quantityInDeck(cardId: string) {
   return findEntry(cardId)?.quantity
 }
 
+function exceedsOwnedQuantity(card: Card) {
+  return ownedOnly.value && (quantityInDeck(card.id) ?? 0) >= ownedQuantity(card.id)
+}
+
 function isCardDisabled(card: Card) {
-  return !canAddCard(entries.value, card, format.value)
+  return !canAddCard(entries.value, card, format.value) || exceedsOwnedQuantity(card)
 }
 
 function addCard(card: Card) {
-  if (readOnly.value || !canAddCard(entries.value, card, format.value)) return
+  if (readOnly.value || !canAddCard(entries.value, card, format.value) || exceedsOwnedQuantity(card)) return
   const existing = findEntry(card.id)
   if (existing) {
     existing.quantity++
@@ -250,7 +271,14 @@ function onExport() {
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
       <div :class="mobilePanel === 'catalogue' ? 'block' : 'hidden'" class="lg:block">
-        <CardFilters v-model="filters" :cards="allCards" class="mb-4" />
+        <CardFilters v-model="filters" :cards="allCards" class="mb-4">
+          <template v-if="userId" #extra>
+            <label class="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
+              <Checkbox :model-value="ownedOnly" @update:model-value="(v) => (ownedOnly = !!v)" />
+              Cartes possédées uniquement
+            </label>
+          </template>
+        </CardFilters>
         <QueryState
           :loading="catalogueLoading"
           :empty="filteredCards.length === 0"

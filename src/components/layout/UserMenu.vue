@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { LayoutDashboardIcon, LibraryIcon, LogOutIcon, NewspaperIcon } from '@lucide/vue'
+import { LayoutDashboardIcon, LibraryIcon, LogOutIcon, NewspaperIcon, UserIcon } from '@lucide/vue'
 import { useAuthUser } from '@/composables/useAuthUser'
 import { useProfile } from '@/composables/useProfile'
 import { supabase } from '@/lib/supabase'
@@ -52,6 +52,12 @@ async function onLogout() {
           Ma collection
         </RouterLink>
       </DropdownMenuItem>
+      <DropdownMenuItem as-child>
+        <RouterLink :to="{ name: 'profile' }">
+          <UserIcon />
+          Mon profil
+        </RouterLink>
+      </DropdownMenuItem>
       <DropdownMenuSeparator />
       <template v-if="isAdmin">
         <DropdownMenuItem as-child>
@@ -75,13 +81,23 @@ async function onLogout() {
     </DropdownMenuContent>
   </DropdownMenu>
 
-  <RouterLink v-else :to="{ name: 'login' }">
-    <Button
-      variant="outline"
-      size="lg"
-      class="rounded-sm border-primary/60 bg-transparent font-engraved text-xs font-bold tracking-[0.06em] text-primary uppercase hover:bg-white/5 hover:text-gold-bright"
-    >
-      Connexion
-    </Button>
-  </RouterLink>
+  <div v-else class="flex items-center gap-2">
+    <RouterLink :to="{ name: 'signup' }" class="hidden sm:block">
+      <Button
+        size="lg"
+        class="rounded-sm bg-primary font-engraved text-xs font-bold tracking-[0.06em] text-primary-foreground uppercase hover:bg-gold-bright"
+      >
+        S'inscrire
+      </Button>
+    </RouterLink>
+    <RouterLink :to="{ name: 'login' }">
+      <Button
+        variant="outline"
+        size="lg"
+        class="rounded-sm border-primary/60 bg-transparent font-engraved text-xs font-bold tracking-[0.06em] text-primary uppercase hover:bg-white/5 hover:text-gold-bright"
+      >
+        Connexion
+      </Button>
+    </RouterLink>
+  </div>
 </template>

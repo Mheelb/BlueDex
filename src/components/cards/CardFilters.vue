@@ -118,6 +118,8 @@ const sortOptions: SelectFieldOption[] = [
           <RangeSliderField v-model="supportRange" label="Soutien" :min="SUPPORT_RANGE[0]" :max="SUPPORT_RANGE[1]" />
         </PopoverContent>
       </Popover>
+
+      <slot name="extra" />
     </CardContent>
   </Card>
 </template>

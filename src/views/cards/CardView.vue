@@ -11,6 +11,7 @@ import CardImage from '@/components/cards/CardImage.vue'
 import CardBadges from '@/components/cards/CardBadges.vue'
 import CardStatPills from '@/components/cards/CardStatPills.vue'
 import CardEffectText from '@/components/cards/CardEffectText.vue'
+import CardPriceHistory from '@/components/cards/CardPriceHistory.vue'
 import CollectionQuantityControl from '@/components/collection/CollectionQuantityControl.vue'
 import BackButton from '@/components/common/BackButton.vue'
 import { Badge } from '@/components/ui/badge'
@@ -121,6 +122,8 @@ usePageSeo({
             <RouterLink :to="{ name: 'login' }" class="text-primary hover:underline">Connecte-toi</RouterLink>
             pour ajouter cette carte à ta collection.
           </p>
+
+          <CardPriceHistory :card-id="card.id" class="mt-6" />
         </div>
       </div>
     </template>

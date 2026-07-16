@@ -1,10 +1,3 @@
-// Appariement d'une annonce Vinted (titre libre) à une carte précise de la
-// base BlueDex. Fonctions pures, zéro dépendance externe — testées sans
-// navigateur ni accès réseau dans matchCard.spec.mjs.
-//
-// Constantes de scoring exportées pour rester ajustables sans toucher à la
-// logique : à recalibrer pendant le dry-run (scripts/scrape-vinted.mjs --dry-run)
-// une fois de vraies annonces sous les yeux.
 export const CONFIDENCE_THRESHOLD = 0.7
 export const NUMBER_MATCH_BASE_SCORE = 0.9
 export const RARITY_BONUS = 0.05
@@ -37,19 +30,6 @@ const STOPWORDS = new Set([
   'kc',
 ])
 
-// Vocabulaire français observé sur de vraies annonces (pas d'abréviations
-// anglaises type SR/SEC — les vendeurs de ce jeu écrivent les mots en toutes
-// lettres, cf. "Cartes communes Blue Rising").
-const RARITY_KEYWORDS = {
-  Commune: ['commune'],
-  'Peu commune': ['peu commune'],
-  Rare: ['rare'],
-  'Prestige I': ['prestige'],
-  'Prestige II': ['prestige'],
-  'Prestige III': ['prestige'],
-  Mythique: ['mythique'],
-}
-
 function escapeRegExp(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -80,8 +60,6 @@ export function hasGameSignal(title, setSlug) {
   return slugPattern.test(title)
 }
 
-// Retourne les numéros normalisés (zéros de tête retirés) trouvés dans le
-// titre, ex. "BR1.014" / "BR1 014" / "BR1-014" -> ["14"].
 export function extractCardNumbers(title, setSlug) {
   const pattern = new RegExp(`\\b${escapeRegExp(setSlug)}[\\s.\\-]{0,3}(\\d{1,3})\\b`, 'gi')
   const found = new Set()
@@ -101,8 +79,6 @@ function bigrams(str) {
   return result
 }
 
-// Coefficient de Dice sur bigrammes de caractères — tolère fautes de frappe
-// et légères variations sans dépendance de fuzzy-matching externe.
 export function diceCoefficient(a, b) {
   if (a === b) return 1
   if (a.length < 2 || b.length < 2) return 0
@@ -138,20 +114,23 @@ export function computeNameScore(title, cardName) {
   return NAME_SCORE_MATCHED_RATIO_WEIGHT * matchedRatio + NAME_SCORE_AVG_SIMILARITY_WEIGHT * avgSimilarity
 }
 
+function containsWholeWord(normalizedTitle, phrase) {
+  const pattern = new RegExp(`\\b${escapeRegExp(normalize(phrase))}\\b`)
+  return pattern.test(normalizedTitle)
+}
+
 export function computeRarityBonus(title, card) {
   const normalizedTitle = normalize(title)
-  const keywords = [...(RARITY_KEYWORDS[card.rarity] ?? [])]
+  const keywords = [card.rarity]
   if (card.is_holo) keywords.push('holo')
   if (card.is_signed) keywords.push('dedicacee', 'signee')
   if (card.is_numbered) keywords.push('numerotee')
   if (card.is_full_art) keywords.push('full art', 'fullart')
 
-  const hasKeyword = keywords.some((keyword) => normalizedTitle.includes(normalize(keyword)))
+  const hasKeyword = keywords.some((keyword) => containsWholeWord(normalizedTitle, keyword))
   return hasKeyword ? RARITY_BONUS : 0
 }
 
-// candidateCards : toutes les cartes du set ciblé par la recherche.
-// Retourne { card, score, signal } si un match est accepté, sinon null.
 export function scoreListing(title, candidateCards, setSlug) {
   if (isLikelyLot(title)) return null
   if (!hasGameSignal(title, setSlug)) return null
@@ -165,18 +144,15 @@ export function scoreListing(title, candidateCards, setSlug) {
   }
   if (numbers.length > 1) return null // plusieurs numéros = annonce multi-cartes, ambigu
 
-  let best = null
-  for (const card of candidateCards) {
-    const nameScore = computeNameScore(title, card.name)
-    if (best === null || nameScore > best.nameScore) {
-      best = { card, nameScore }
-    }
-  }
-  if (best === null) return null
+  const scored = candidateCards
+    .map((card) => ({ card, rawScore: computeNameScore(title, card.name) + computeRarityBonus(title, card) }))
+    .sort((a, b) => b.rawScore - a.rawScore)
 
-  const bonus = computeRarityBonus(title, best.card)
-  const finalScore = Math.min(1, best.nameScore + bonus)
-  if (finalScore < CONFIDENCE_THRESHOLD) return null
+  const best = scored[0]
+  if (!best || best.rawScore < CONFIDENCE_THRESHOLD) return null
 
-  return { card: best.card, score: finalScore, signal: 'name' }
+  const runnerUp = scored[1]
+  if (runnerUp && runnerUp.rawScore === best.rawScore) return null
+
+  return { card: best.card, score: Math.min(1, best.rawScore), signal: 'name' }
 }

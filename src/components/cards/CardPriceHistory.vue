@@ -82,7 +82,7 @@ const hovered = computed(() => (chart.value && hoverIndex.value !== null ? chart
 
 <template>
   <div class="rounded-lg border bg-card p-4">
-    <p class="mb-3 text-sm font-medium text-muted-foreground">Prix sur Vinted</p>
+    <p class="mb-3 text-sm font-medium text-muted-foreground">Prix de la carte</p>
 
     <p v-if="isPending" class="text-sm text-muted-foreground">Chargement…</p>
     <p v-else-if="!chart" class="text-sm text-muted-foreground">Pas encore de données de prix.</p>

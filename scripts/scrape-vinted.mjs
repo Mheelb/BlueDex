@@ -9,12 +9,13 @@
 //
 // Exécuté quotidiennement par .github/workflows/scrape-vinted.yml — voir ce
 // fichier pour les secrets requis (SUPABASE_SERVICE_ROLE_KEY).
-import { launchVintedBrowser, searchVinted } from './lib/vintedClient.mjs'
-import { scoreListing } from './lib/matchCard.mjs'
+import { launchVintedBrowser, openVintedSession, searchItems, fetchItemDescription } from './lib/vintedClient.mjs'
+import { scoreListing, hasGameSignal, isLikelyLot } from './lib/matchCard.mjs'
 import { supabaseAdmin } from './lib/supabaseAdmin.mjs'
 
 const MAX_PAGES_PER_SET = 5
 const UPSERT_CHUNK_SIZE = 200
+const DESCRIPTION_FALLBACK_LIMIT = 25
 
 const args = process.argv.slice(2)
 const dryRun = args.includes('--dry-run')
@@ -39,6 +40,12 @@ function toPriceListingRow(item, card, score) {
   }
 }
 
+function logMatch(prefix, item, result) {
+  console.log(
+    `  MATCH${prefix} score=${result.score.toFixed(2)} signal=${result.signal.padEnd(6)} "${item.title}" -> ${result.card.name} (#${result.card.number}) — ${item.price?.amount}${item.price?.currency_code}`,
+  )
+}
+
 async function upsertRows(rows) {
   for (let i = 0; i < rows.length; i += UPSERT_CHUNK_SIZE) {
     const chunk = rows.slice(i, i + UPSERT_CHUNK_SIZE)
@@ -47,25 +54,50 @@ async function upsertRows(rows) {
   }
 }
 
-async function processSet(browser, set, cards) {
+async function processSet(session, set, cards) {
   const query = `blue rising ${set.slug}`
   console.log(`[${set.slug}] searching Vinted for "${query}"...`)
-  const items = await searchVinted(browser, query, { maxPages: MAX_PAGES_PER_SET })
+  const items = await searchItems(session.page, query, { maxPages: MAX_PAGES_PER_SET })
   console.log(`[${set.slug}] fetched ${items.length} listings`)
 
   const rows = []
+  const unresolved = []
+
   for (const item of items) {
     const result = scoreListing(item.title, cards, set.slug)
-    if (!result) continue
-    rows.push(toPriceListingRow(item, result.card, result.score))
-    if (dryRun) {
-      console.log(
-        `  MATCH  score=${result.score.toFixed(2)} signal=${result.signal.padEnd(6)} "${item.title}" -> ${result.card.name} (#${result.card.number}) — ${item.price?.amount}${item.price?.currency_code}`,
-      )
+    if (result) {
+      rows.push(toPriceListingRow(item, result.card, result.score))
+      if (dryRun) logMatch('', item, result)
+      continue
+    }
+    if (hasGameSignal(item.title, set.slug) && !isLikelyLot(item.title)) {
+      unresolved.push(item)
     }
   }
 
-  console.log(`[${set.slug}] ${rows.length}/${items.length} listings matched`)
+  console.log(
+    `[${set.slug}] ${rows.length}/${items.length} matched on title alone, ${unresolved.length} plausible but unresolved`,
+  )
+
+  const toRetry = unresolved.slice(0, DESCRIPTION_FALLBACK_LIMIT)
+  let recovered = 0
+  for (const item of toRetry) {
+    const description = await fetchItemDescription(session.page, item.url)
+    if (description) {
+      const result = scoreListing(`${item.title} ${description}`, cards, set.slug)
+      if (result) {
+        rows.push(toPriceListingRow(item, result.card, result.score))
+        recovered++
+        if (dryRun) logMatch(' (desc)', item, result)
+      }
+    }
+    await randomDelay(1500, 3000)
+  }
+  if (toRetry.length > 0) {
+    console.log(`[${set.slug}] description fallback: ${recovered}/${toRetry.length} additional matches`)
+  }
+
+  console.log(`[${set.slug}] ${rows.length}/${items.length} listings matched total`)
 
   if (!dryRun && rows.length > 0) {
     await upsertRows(rows)
@@ -87,7 +119,12 @@ async function main() {
         const { data: cards, error: cardsError } = await supabaseAdmin.from('cards').select('*').eq('set_id', set.id)
         if (cardsError) throw new Error(`Failed to load cards: ${cardsError.message}`)
 
-        await processSet(browser, set, cards ?? [])
+        const session = await openVintedSession(browser)
+        try {
+          await processSet(session, set, cards ?? [])
+        } finally {
+          await session.close()
+        }
       } catch (err) {
         console.error(`[${set.slug}] failed:`, err.message)
       }

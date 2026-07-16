@@ -95,3 +95,39 @@ describe('scoreListing', () => {
     expect(scoreListing('Cartes communes Blue Rising', cards, 'br1')).toBeNull()
   })
 })
+
+describe('scoreListing with a name shared by several printings (real Zack Nani case)', () => {
+  const zackNaniPrintings = [
+    makeCard({ number: '095', name: 'Zack Nani', rarity: 'Rare' }),
+    makeCard({ number: '215', name: 'Zack Nani', rarity: 'Rare' }),
+    makeCard({ number: '261', name: 'Zack Nani', rarity: 'Prestige III' }),
+    makeCard({ number: '281', name: 'Zack Nani', rarity: 'Prestige II' }),
+  ]
+
+  it('rejects a name-only listing with no number and no rarity to disambiguate', () => {
+    expect(scoreListing('Carte Blue Rising Zack Nani', zackNaniPrintings, 'br1')).toBeNull()
+  })
+
+  it('resolves to the correct printing when the exact rarity is spelled out', () => {
+    const result = scoreListing(
+      'Blue Rising Zack Nani Prestige II Héros Émissaire TCG Karmine Corp 15 EUR',
+      zackNaniPrintings,
+      'br1',
+    )
+    expect(result).not.toBeNull()
+    expect(result.card.number).toBe('281')
+  })
+
+  it('does not let "Prestige III" satisfy a "Prestige II" candidate (roman numeral prefix collision)', () => {
+    const result = scoreListing('Blue Rising Zack Nani Prestige III', zackNaniPrintings, 'br1')
+    expect(result).not.toBeNull()
+    expect(result.card.number).toBe('261')
+  })
+
+  it('still resolves unambiguously via the number even when the name is shared', () => {
+    const result = scoreListing('Blue Rising BR1.281 Zack Nani', zackNaniPrintings, 'br1')
+    expect(result).not.toBeNull()
+    expect(result.card.number).toBe('281')
+    expect(result.signal).toBe('number')
+  })
+})

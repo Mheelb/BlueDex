@@ -55,7 +55,7 @@ async function upsertRows(rows) {
 }
 
 async function processSet(session, set, cards) {
-  const query = `blue rising ${set.slug}`
+  const query = 'blue rising'
   console.log(`[${set.slug}] searching Vinted for "${query}"...`)
   const items = await searchItems(session.page, query, { maxPages: MAX_PAGES_PER_SET })
   console.log(`[${set.slug}] fetched ${items.length} listings`)

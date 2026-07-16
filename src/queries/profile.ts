@@ -16,3 +16,11 @@ export async function updateProfileAvatar(userId: string, avatarUrl: string): Pr
   const { error } = await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', userId)
   if (error) throw new Error(error.message)
 }
+
+export async function updateProfile(
+  userId: string,
+  updates: { display_name?: string; avatar_url?: string },
+): Promise<void> {
+  const { error } = await supabase.from('profiles').update(updates).eq('id', userId)
+  if (error) throw new Error(error.message)
+}

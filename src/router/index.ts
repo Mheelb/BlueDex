@@ -80,6 +80,11 @@ const router = createRouter({
       component: () => import('@/views/auth/SignupView.vue'),
     },
     {
+      path: '/profil',
+      name: 'profile',
+      component: () => import('@/views/auth/ProfileView.vue'),
+    },
+    {
       path: '/admin/sets',
       name: 'admin-sets',
       component: () => import('@/views/admin/AdminSetsView.vue'),
@@ -114,7 +119,11 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  const requiresSession = to.name === 'deck-builder-new' || to.name === 'deck-builder-edit' || to.name === 'collection'
+  const requiresSession =
+    to.name === 'deck-builder-new' ||
+    to.name === 'deck-builder-edit' ||
+    to.name === 'collection' ||
+    to.name === 'profile'
   const requiresAdmin = to.name === 'admin-sets' || to.name === 'admin-set-cards' || to.name === 'admin-articles'
   if (!requiresSession && !requiresAdmin) return true
 

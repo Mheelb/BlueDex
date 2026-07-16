@@ -2,6 +2,10 @@ name: Scrape Vinted Prices
 
 on:
   schedule:
+    # 04:00 UTC = 05:00 heure française en hiver (CET, UTC+1), 06:00 en été
+    # (CEST, UTC+2) — délibérément tôt le matin, quand le site a le moins de
+    # visiteurs actifs. Le front (CardPriceHistory.vue) annonce "tôt le
+    # matin, heure française" : garder les deux synchronisés si ce cron change.
     - cron: '0 4 * * *'
   workflow_dispatch: {}
   # TODO: retirer ce trigger une fois le scraper validé en conditions réelles

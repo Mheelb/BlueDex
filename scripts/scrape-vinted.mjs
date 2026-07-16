@@ -15,6 +15,7 @@ import { supabaseAdmin } from './lib/supabaseAdmin.mjs'
 
 const MAX_PAGES_PER_SET = 5
 const UPSERT_CHUNK_SIZE = 200
+const SEARCH_QUERIES = ['blue rising', 'karmine corp tcg', 'blue rising kc', 'bluerising', 'blue rising br1']
 const DESCRIPTION_FALLBACK_LIMIT = 25
 
 const args = process.argv.slice(2)
@@ -54,11 +55,28 @@ async function upsertRows(rows) {
   }
 }
 
+async function fetchAllListings(page, set) {
+  const seenIds = new Set()
+  const items = []
+  for (const query of SEARCH_QUERIES) {
+    console.log(`[${set.slug}] searching Vinted for "${query}"...`)
+    const results = await searchItems(page, query, { maxPages: MAX_PAGES_PER_SET })
+    let added = 0
+    for (const item of results) {
+      if (seenIds.has(item.id)) continue
+      seenIds.add(item.id)
+      items.push(item)
+      added++
+    }
+    console.log(`[${set.slug}] "${query}": ${results.length} listings, ${added} new`)
+    await randomDelay(3000, 6000)
+  }
+  return items
+}
+
 async function processSet(session, set, cards) {
-  const query = 'blue rising'
-  console.log(`[${set.slug}] searching Vinted for "${query}"...`)
-  const items = await searchItems(session.page, query, { maxPages: MAX_PAGES_PER_SET })
-  console.log(`[${set.slug}] fetched ${items.length} listings`)
+  const items = await fetchAllListings(session.page, set)
+  console.log(`[${set.slug}] fetched ${items.length} listings total across ${SEARCH_QUERIES.length} queries`)
 
   const rows = []
   const unresolved = []

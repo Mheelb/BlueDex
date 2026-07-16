@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
+import { InfoIcon } from '@lucide/vue'
 import { priceKeys, fetchPriceHistory } from '@/queries/prices'
 import { aggregateWeeklyMedian } from '@/lib/priceAggregation'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 const props = defineProps<{ cardId: string }>()
 
@@ -82,7 +84,23 @@ const hovered = computed(() => (chart.value && hoverIndex.value !== null ? chart
 
 <template>
   <div class="rounded-lg border bg-card p-4">
-    <p class="mb-3 text-sm font-medium text-muted-foreground">Prix de la carte</p>
+    <TooltipProvider :delay-duration="200">
+      <div class="mb-3 flex items-center gap-1.5">
+        <p class="text-sm font-medium text-muted-foreground">Prix de la carte</p>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <button type="button" aria-label="À propos de ces prix" class="text-muted-foreground hover:text-foreground">
+              <InfoIcon class="size-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" class="max-w-64 text-pretty whitespace-normal">
+            Ces prix correspondent à des annonces publiées, pas à des ventes confirmées, et peuvent donc être sujets à
+            manipulation. Ils sont fournis à titre indicatif : il est recommandé de vérifier les prix par soi-même avant
+            tout achat. Mise à jour quotidienne vers 5h du matin (heure de Paris, CET/CEST).
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
 
     <p v-if="isPending" class="text-sm text-muted-foreground">Chargement…</p>
     <p v-else-if="!chart" class="text-sm text-muted-foreground">Pas encore de données de prix.</p>

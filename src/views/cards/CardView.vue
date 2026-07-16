@@ -112,8 +112,6 @@ usePageSeo({
             <CardEffectText :text="card.effect" />
           </div>
 
-          <CardPriceHistory :card-id="card.id" class="mt-6" />
-
           <CollectionQuantityControl
             v-if="userId"
             :quantity="ownedQuantity"
@@ -124,6 +122,8 @@ usePageSeo({
             <RouterLink :to="{ name: 'login' }" class="text-primary hover:underline">Connecte-toi</RouterLink>
             pour ajouter cette carte à ta collection.
           </p>
+
+          <CardPriceHistory :card-id="card.id" class="mt-6" />
         </div>
       </div>
     </template>

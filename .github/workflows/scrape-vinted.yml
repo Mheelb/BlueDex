@@ -8,10 +8,6 @@ on:
     # matin, heure française" : garder les deux synchronisés si ce cron change.
     - cron: '0 4 * * *'
   workflow_dispatch: {}
-  # TODO: retirer ce trigger une fois le scraper validé en conditions réelles
-  # sur un runner GitHub-hosted — sert juste à tester sans passer par main.
-  push:
-    branches: [feature/price]
 
 concurrency:
   group: scrape-vinted

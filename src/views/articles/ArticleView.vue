@@ -8,6 +8,8 @@ import { SITE_NAME, SITE_URL, absoluteUrl, usePageSeo, useJsonLd } from '@/lib/s
 import BackButton from '@/components/common/BackButton.vue'
 import QueryState from '@/components/common/QueryState.vue'
 import Heading from '@/components/common/Heading.vue'
+import TextLink from '@/components/common/TextLink.vue'
+import { Button } from '@/components/ui/button'
 
 const props = defineProps<{ slug: string }>()
 
@@ -79,6 +81,33 @@ function formatDate(date: string | null) {
 
       <!-- eslint-disable-next-line vue/no-v-html -- contentHtml is sanitized via DOMPurify in renderMarkdown -->
       <div class="prose prose-invert mt-8 max-w-none" @click="onContentClick" v-html="contentHtml" />
+
+      <section class="mt-12 rounded-md border border-primary/30 bg-card p-6 text-center sm:p-9">
+        <Heading as="h2" size="lg" class="font-engraved text-foreground">Continue l'exploration</Heading>
+        <p class="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+          Découvre les cartes des sets, construis ton deck ou suis le reste de l'actu Blue Rising.
+        </p>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <Button
+            as-child
+            size="lg"
+            class="rounded-sm bg-primary font-engraved text-xs font-bold tracking-[0.06em] text-primary-foreground uppercase hover:bg-gold-bright"
+          >
+            <RouterLink :to="{ name: 'sets' }">Explorer les cartes</RouterLink>
+          </Button>
+          <Button
+            as-child
+            size="lg"
+            variant="outline"
+            class="rounded-sm border-primary/60 bg-transparent font-engraved text-xs font-bold tracking-[0.06em] text-primary uppercase hover:bg-white/5 hover:text-gold-bright"
+          >
+            <RouterLink :to="{ name: 'deck-builder' }">Construire un deck</RouterLink>
+          </Button>
+        </div>
+        <TextLink :to="{ name: 'articles' }" variant="primary" class="mt-5 inline-block text-xs text-muted-foreground">
+          Voir tous les articles
+        </TextLink>
+      </section>
     </template>
   </QueryState>
 </template>

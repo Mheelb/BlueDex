@@ -11,6 +11,7 @@ import CardImage from '@/components/cards/CardImage.vue'
 import CardBadges from '@/components/cards/CardBadges.vue'
 import CardStatPills from '@/components/cards/CardStatPills.vue'
 import CardEffectText from '@/components/cards/CardEffectText.vue'
+import CardPriceHistory from '@/components/cards/CardPriceHistory.vue'
 import CollectionQuantityControl from '@/components/collection/CollectionQuantityControl.vue'
 import BackButton from '@/components/common/BackButton.vue'
 import { Badge } from '@/components/ui/badge'
@@ -110,6 +111,8 @@ usePageSeo({
             <p class="mb-1 text-sm font-medium text-muted-foreground">Effet</p>
             <CardEffectText :text="card.effect" />
           </div>
+
+          <CardPriceHistory :card-id="card.id" class="mt-6" />
 
           <CollectionQuantityControl
             v-if="userId"

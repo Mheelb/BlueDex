@@ -21,12 +21,10 @@ function randomDelay(minMs, maxMs) {
   return new Promise((resolve) => setTimeout(resolve, minMs + Math.random() * (maxMs - minMs)))
 }
 
-// Navigue une fois vers la page de recherche pour laisser le challenge
-// Cloudflare/Datadome se résoudre, puis pagine l'API JSON via fetch() interne
-// à la page. Retourne le tableau brut des items Vinted (title, price, url...).
 export async function searchVinted(browser, query, { maxPages = 3 } = {}) {
   const context = await browser.newContext({ userAgent: USER_AGENT, locale: 'fr-FR' })
   const page = await context.newPage()
+  const seenIds = new Set()
   const items = []
 
   try {
@@ -55,7 +53,11 @@ export async function searchVinted(browser, query, { maxPages = 3 } = {}) {
         break
       }
 
-      items.push(...result.items)
+      for (const item of result.items) {
+        if (seenIds.has(item.id)) continue
+        seenIds.add(item.id)
+        items.push(item)
+      }
       if (result.items.length < PER_PAGE) break // dernière page
 
       await randomDelay(2000, 4000)

@@ -246,7 +246,9 @@ function setBody(set, cards) {
 }
 
 function cardBody(card, setName) {
-  const img = card.image_url ? `<img src="${escapeAttr(cdnImage(card.image_url, 600))}" alt="${escapeAttr(card.name)}" />` : ''
+  const img = card.image_url
+    ? `<img src="${escapeAttr(cdnImage(card.image_url, 600))}" alt="${escapeAttr(card.name)}" />`
+    : ''
   const meta = [card.type, card.faction, card.rarity].filter(Boolean).map(escapeHtml).join(' · ')
   return [
     '<main>',

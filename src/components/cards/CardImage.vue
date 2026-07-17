@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ImageOffIcon } from '@lucide/vue'
+import { cdnImage } from '@/lib/imageCdn'
 
 const props = defineProps<{
   src: string | null
   alt: string
   isHolo?: boolean
+  width?: number
 }>()
+
+const resolvedSrc = computed(() => cdnImage(props.src, props.width ?? 500))
 
 const tiltEl = ref<HTMLElement | null>(null)
 const hovering = ref(false)
@@ -63,7 +67,7 @@ function onPointerLeave() {
       @pointermove="onPointerMove"
       @pointerleave="onPointerLeave"
     >
-      <img v-if="props.src" :src="props.src" :alt="props.alt" class="h-full w-full object-cover" loading="lazy" />
+      <img v-if="resolvedSrc" :src="resolvedSrc" :alt="props.alt" class="h-full w-full object-cover" loading="lazy" />
       <div v-else class="flex h-full w-full flex-col items-center justify-center gap-2 bg-muted text-muted-foreground">
         <ImageOffIcon class="size-10" />
         <span class="text-xs">Pas d'image</span>

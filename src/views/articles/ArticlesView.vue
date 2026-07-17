@@ -2,6 +2,7 @@
 import { NewspaperIcon } from '@lucide/vue'
 import { useQuery } from '@tanstack/vue-query'
 import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
+import { cdnImage } from '@/lib/imageCdn'
 import { usePageSeo } from '@/lib/seo'
 import QueryState from '@/components/common/QueryState.vue'
 import Heading from '@/components/common/Heading.vue'
@@ -52,7 +53,7 @@ function formatDate(date: string | null) {
         <div class="hidden h-24 w-36 shrink-0 overflow-hidden rounded-lg bg-muted sm:block">
           <img
             v-if="article.cover_image_url"
-            :src="article.cover_image_url"
+            :src="cdnImage(article.cover_image_url, 300)"
             :alt="article.title"
             class="h-full w-full bg-gradient-to-br from-primary to-primary/70 object-cover"
           />

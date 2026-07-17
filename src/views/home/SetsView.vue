@@ -9,6 +9,7 @@ import { fetchSets, setKeys } from '@/queries/sets'
 import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
 import { cardKeys, fetchFeaturedCards } from '@/queries/cards'
 import { withLoopPadding } from '@/lib/carouselLoop'
+import { cdnImage } from '@/lib/imageCdn'
 import { usePageSeo } from '@/lib/seo'
 import HomeHero from '@/components/home/HomeHero.vue'
 import SetCard from '@/components/sets/SetCard.vue'
@@ -141,7 +142,7 @@ function goToArticleSlide(index: number) {
                   </Badge>
                   <img
                     v-if="slide.item.cover_image_url"
-                    :src="slide.item.cover_image_url"
+                    :src="cdnImage(slide.item.cover_image_url, 600)"
                     :alt="slide.item.title"
                     class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />

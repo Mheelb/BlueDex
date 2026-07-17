@@ -88,6 +88,12 @@ function absoluteUrl(path) {
   if (/^https?:\/\//.test(path)) return path
   return `${SITE_URL}${path.startsWith('/') ? '' : '/'}${path}`
 }
+function cdnImage(url, width) {
+  if (!url || !/^https?:\/\//.test(url)) return url
+  const params = new URLSearchParams({ url })
+  if (width) params.set('w', String(width))
+  return `${SITE_URL}/.netlify/images?${params.toString()}`
+}
 
 // --- Récupération des données --------------------------------------------
 async function fetchPublishedArticles() {
@@ -194,7 +200,7 @@ function articleBody(article, contentHtml) {
     ? new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
     : ''
   const cover = article.cover_image_url
-    ? `<img src="${escapeAttr(article.cover_image_url)}" alt="${escapeAttr(article.title)}" />`
+    ? `<img src="${escapeAttr(cdnImage(article.cover_image_url, 800))}" alt="${escapeAttr(article.title)}" />`
     : ''
   return [
     '<article>',
@@ -240,7 +246,7 @@ function setBody(set, cards) {
 }
 
 function cardBody(card, setName) {
-  const img = card.image_url ? `<img src="${escapeAttr(card.image_url)}" alt="${escapeAttr(card.name)}" />` : ''
+  const img = card.image_url ? `<img src="${escapeAttr(cdnImage(card.image_url, 600))}" alt="${escapeAttr(card.name)}" />` : ''
   const meta = [card.type, card.faction, card.rarity].filter(Boolean).map(escapeHtml).join(' · ')
   return [
     '<main>',
@@ -363,7 +369,7 @@ async function main() {
   let articleCount = 0
   for (const article of articles) {
     const canonical = `${SITE_URL}/actus/${article.slug}`
-    const image = article.cover_image_url ? absoluteUrl(article.cover_image_url) : DEFAULT_OG_IMAGE
+    const image = article.cover_image_url ? cdnImage(article.cover_image_url, 1200) : DEFAULT_OG_IMAGE
     const published = article.published_at ?? article.created_at
     const jsonLd = {
       '@context': 'https://schema.org',
@@ -429,7 +435,7 @@ async function main() {
       title: `${card.name} · ${set.name}`,
       description: `${card.name} (#${card.number})${details ? ` — ${details}` : ''} du set ${set.name} de Blue Rising.`,
       canonical,
-      image: card.image_url ? absoluteUrl(card.image_url) : DEFAULT_OG_IMAGE,
+      image: card.image_url ? cdnImage(card.image_url, 800) : DEFAULT_OG_IMAGE,
       jsonLd: breadcrumbLd([
         { name: 'Accueil', path: '/' },
         { name: 'Sets', path: '/sets' },
@@ -450,7 +456,7 @@ async function main() {
       title: `${deck.name} — Deck Blue Rising`,
       description: `Deck ${DECK_FORMAT_LABELS[deck.format] ?? deck.format} Blue Rising${author ? ` par ${author}` : ''} — ${cardTotal} cartes. Découvre la liste complète sur BlueDex.`,
       canonical,
-      image: deck.cover_card?.image_url ? absoluteUrl(deck.cover_card.image_url) : DEFAULT_OG_IMAGE,
+      image: deck.cover_card?.image_url ? cdnImage(deck.cover_card.image_url, 800) : DEFAULT_OG_IMAGE,
       jsonLd: breadcrumbLd([
         { name: 'Accueil', path: '/' },
         { name: 'Deck Builder', path: '/decks' },

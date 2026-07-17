@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/vue-query'
 import { renderMarkdown } from '@/lib/markdown'
 import { useInternalLinkNav } from '@/composables/useInternalLinkNav'
 import { articleKeys, fetchArticleBySlug } from '@/queries/articles'
+import { cdnImage } from '@/lib/imageCdn'
 import { SITE_NAME, SITE_URL, absoluteUrl, usePageSeo, useJsonLd } from '@/lib/seo'
 import BackButton from '@/components/common/BackButton.vue'
 import QueryState from '@/components/common/QueryState.vue'
@@ -74,7 +75,7 @@ function formatDate(date: string | null) {
 
       <img
         v-if="article.cover_image_url"
-        :src="article.cover_image_url"
+        :src="cdnImage(article.cover_image_url, 1000)"
         :alt="article.title"
         class="mt-6 aspect-video w-full rounded-xl bg-gradient-to-br from-primary to-primary/70 object-cover"
       />

@@ -5,6 +5,7 @@ import { BookmarkIcon, LayersIcon } from '@lucide/vue'
 import type { DeckFormat } from '@/types/deck'
 import type { DeckListItem } from '@/types/deck'
 import { DECK_FORMAT_LABELS } from '@/types/deck'
+import { cdnImage } from '@/lib/imageCdn'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -91,7 +92,7 @@ const table = useVueTable({
         >
           <img
             v-if="row.original.cover_card?.image_url"
-            :src="row.original.cover_card.image_url"
+            :src="cdnImage(row.original.cover_card.image_url, 120)"
             :alt="row.original.cover_card.name"
             class="h-full w-full object-cover"
             :class="{ 'ring-2 ring-primary': row.original.cover_card.is_holo }"

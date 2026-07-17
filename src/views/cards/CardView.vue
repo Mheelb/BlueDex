@@ -83,7 +83,7 @@ usePageSeo({
 
       <div class="grid grid-cols-1 gap-10 md:grid-cols-2">
         <div class="mx-auto w-full max-w-sm">
-          <CardImage :src="card.image_url" :alt="card.name" :is-holo="card.is_holo" />
+          <CardImage :src="card.image_url" :alt="card.name" :is-holo="card.is_holo" :width="700" />
           <p v-if="card.artist" class="mt-2 text-center text-xs text-muted-foreground">
             Illustration : {{ card.artist }}
           </p>

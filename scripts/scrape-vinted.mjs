@@ -27,6 +27,40 @@ function randomDelay(minMs, maxMs) {
   return new Promise((resolve) => setTimeout(resolve, minMs + Math.random() * (maxMs - minMs)))
 }
 
+function parisDateString(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(date)
+}
+
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+}
+
+function buildSnapshotRows(rows, snapshotDate) {
+  const byCard = new Map()
+  for (const row of rows) {
+    const list = byCard.get(row.card_id) ?? []
+    list.push(row)
+    byCard.set(row.card_id, list)
+  }
+
+  const snapshots = []
+  for (const [cardId, list] of byCard) {
+    const prices = list.map((r) => r.price_amount)
+    snapshots.push({
+      card_id: cardId,
+      snapshot_date: snapshotDate,
+      median_price: Number(median(prices).toFixed(2)),
+      min_price: Math.min(...prices),
+      max_price: Math.max(...prices),
+      listing_count: list.length,
+      currency: list[0].price_currency,
+    })
+  }
+  return snapshots
+}
+
 function toPriceListingRow(item, card, score) {
   return {
     card_id: card.id,
@@ -55,6 +89,13 @@ async function upsertRows(rows) {
   }
 }
 
+async function upsertSnapshots(snapshots) {
+  const { error } = await supabaseAdmin
+    .from('price_daily_snapshots')
+    .upsert(snapshots, { onConflict: 'card_id,snapshot_date' })
+  if (error) throw new Error(`Snapshot upsert failed: ${error.message}`)
+}
+
 async function fetchAllListings(page, set) {
   const seenIds = new Set()
   const items = []
@@ -74,7 +115,7 @@ async function fetchAllListings(page, set) {
   return items
 }
 
-async function processSet(session, set, cards) {
+async function processSet(session, set, cards, snapshotDate) {
   const items = await fetchAllListings(session.page, set)
   console.log(`[${set.slug}] fetched ${items.length} listings total across ${SEARCH_QUERIES.length} queries`)
 
@@ -119,7 +160,11 @@ async function processSet(session, set, cards) {
 
   if (!dryRun && rows.length > 0) {
     await upsertRows(rows)
-    console.log(`[${set.slug}] wrote ${rows.length} rows to price_listings`)
+    const snapshots = buildSnapshotRows(rows, snapshotDate)
+    await upsertSnapshots(snapshots)
+    console.log(
+      `[${set.slug}] wrote ${rows.length} rows to price_listings and ${snapshots.length} daily snapshots (${snapshotDate})`,
+    )
   }
 }
 
@@ -130,6 +175,7 @@ async function main() {
   if (setsError) throw new Error(`Failed to load sets: ${setsError.message}`)
   if (!sets || sets.length === 0) throw new Error(`No sets found${onlySetSlug ? ` for slug "${onlySetSlug}"` : ''}`)
 
+  const snapshotDate = parisDateString()
   const browser = await launchVintedBrowser()
   try {
     for (const set of sets) {
@@ -139,7 +185,7 @@ async function main() {
 
         const session = await openVintedSession(browser)
         try {
-          await processSet(session, set, cards ?? [])
+          await processSet(session, set, cards ?? [], snapshotDate)
         } finally {
           await session.close()
         }

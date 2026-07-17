@@ -2,18 +2,19 @@
 import { computed, ref } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { InfoIcon } from '@lucide/vue'
-import { priceKeys, fetchPriceHistory } from '@/queries/prices'
-import { aggregateWeeklyMedian } from '@/lib/priceAggregation'
+import { priceKeys, fetchPriceSnapshots } from '@/queries/prices'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 const props = defineProps<{ cardId: string }>()
 
-const { data: listings, isPending } = useQuery({
-  queryKey: computed(() => priceKeys.history(props.cardId)),
-  queryFn: () => fetchPriceHistory(props.cardId),
+const { data: snapshots, isPending } = useQuery({
+  queryKey: computed(() => priceKeys.snapshots(props.cardId)),
+  queryFn: () => fetchPriceSnapshots(props.cardId),
 })
 
-const points = computed(() => aggregateWeeklyMedian(listings.value ?? []))
+const points = computed(() =>
+  (snapshots.value ?? []).map((s) => ({ date: s.snapshot_date, median: s.median_price, count: s.listing_count })),
+)
 
 const WIDTH = 560
 const HEIGHT = 200
@@ -22,8 +23,8 @@ const PADDING_Y = 24
 const INNER_WIDTH = WIDTH - PADDING_X * 2
 const INNER_HEIGHT = HEIGHT - PADDING_Y * 2
 
-function formatWeek(weekStart: string) {
-  return new Date(weekStart).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 }
 
 function formatPrice(value: number) {
@@ -110,7 +111,7 @@ const hovered = computed(() => (chart.value && hoverIndex.value !== null ? chart
         :viewBox="`0 0 ${WIDTH} ${HEIGHT}`"
         class="w-full cursor-crosshair"
         role="img"
-        :aria-label="`Courbe de prix médian hebdomadaire, de ${formatPrice(chart.minPrice)} à ${formatPrice(chart.maxPrice)}`"
+        :aria-label="`Courbe de prix médian journalier, de ${formatPrice(chart.minPrice)} à ${formatPrice(chart.maxPrice)}`"
         @pointermove="onPointerMove"
         @pointerleave="onPointerLeave"
       >
@@ -156,7 +157,7 @@ const hovered = computed(() => (chart.value && hoverIndex.value !== null ? chart
 
         <circle
           v-for="(c, i) in chart.coords"
-          :key="c.weekStart"
+          :key="c.date"
           :cx="c.x"
           :cy="c.y"
           :r="hoverIndex === i ? 5 : 4"
@@ -175,10 +176,10 @@ const hovered = computed(() => (chart.value && hoverIndex.value !== null ? chart
         </text>
 
         <text :x="chart.coords[0].x" :y="HEIGHT - 4" text-anchor="start" class="fill-muted-foreground text-[9px]">
-          {{ formatWeek(chart.coords[0].weekStart) }}
+          {{ formatDate(chart.coords[0].date) }}
         </text>
         <text :x="chart.last.x" :y="HEIGHT - 4" text-anchor="end" class="fill-muted-foreground text-[9px]">
-          {{ formatWeek(chart.last.weekStart) }}
+          {{ formatDate(chart.last.date) }}
         </text>
       </svg>
 
@@ -189,13 +190,13 @@ const hovered = computed(() => (chart.value && hoverIndex.value !== null ? chart
       >
         <p class="font-medium">{{ formatPrice(hovered.median) }}</p>
         <p class="text-muted-foreground">
-          {{ formatWeek(hovered.weekStart) }} · {{ hovered.count }} annonce{{ hovered.count > 1 ? 's' : '' }}
+          {{ formatDate(hovered.date) }} · {{ hovered.count }} annonce{{ hovered.count > 1 ? 's' : '' }}
         </p>
       </div>
 
       <ul class="sr-only">
-        <li v-for="c in chart.coords" :key="`sr-${c.weekStart}`">
-          Semaine du {{ formatWeek(c.weekStart) }} : prix médian {{ formatPrice(c.median) }} sur {{ c.count }} annonce{{
+        <li v-for="c in chart.coords" :key="`sr-${c.date}`">
+          {{ formatDate(c.date) }} : prix médian {{ formatPrice(c.median) }} sur {{ c.count }} annonce{{
             c.count > 1 ? 's' : ''
           }}
         </li>

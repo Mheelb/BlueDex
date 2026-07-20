@@ -17,7 +17,10 @@ export async function deleteCardImage(imageUrl: string | null) {
 }
 
 export async function uploadCardImage(path: string, file: File) {
-  const { error } = await supabase.storage.from(CARD_IMAGES_BUCKET).upload(path, file)
+  // Les noms de fichiers sont uniques (Date.now()) et jamais réécrits : on peut
+  // laisser le CDN/navigateur cacher un an. Évite que Netlify re-télécharge la
+  // source depuis Supabase toutes les heures (défaut = 3600s) → egress en moins.
+  const { error } = await supabase.storage.from(CARD_IMAGES_BUCKET).upload(path, file, { cacheControl: '31536000' })
   if (error) throw new Error(error.message)
   return supabase.storage.from(CARD_IMAGES_BUCKET).getPublicUrl(path).data.publicUrl
 }

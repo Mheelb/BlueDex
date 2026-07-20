@@ -17,7 +17,7 @@ export async function deleteArticleImage(imageUrl: string | null) {
 }
 
 export async function uploadArticleImage(path: string, file: File) {
-  const { error } = await supabase.storage.from(ARTICLE_IMAGES_BUCKET).upload(path, file)
+  const { error } = await supabase.storage.from(ARTICLE_IMAGES_BUCKET).upload(path, file, { cacheControl: '31536000' })
   if (error) throw new Error(error.message)
   return supabase.storage.from(ARTICLE_IMAGES_BUCKET).getPublicUrl(path).data.publicUrl
 }

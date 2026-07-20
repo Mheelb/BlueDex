@@ -129,7 +129,7 @@ const table = useVueTable({
 
         <div v-if="showAuthor && row.original.author" class="flex shrink-0 items-center gap-2">
           <Avatar class="size-6">
-            <AvatarImage v-if="row.original.author.avatar_url" :src="row.original.author.avatar_url" />
+            <AvatarImage v-if="row.original.author.avatar_url" :src="cdnImage(row.original.author.avatar_url, 96)!" />
             <AvatarFallback class="text-[10px]">{{
               row.original.author.display_name.slice(0, 2).toUpperCase()
             }}</AvatarFallback>

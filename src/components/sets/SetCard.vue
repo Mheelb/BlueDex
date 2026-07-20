@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { LayersIcon } from '@lucide/vue'
 import type { CardSet } from '@/types/card'
+import { cdnImage } from '@/lib/imageCdn'
 import { Badge } from '@/components/ui/badge'
 
 defineProps<{
@@ -23,7 +24,7 @@ function formatDate(date: string | null) {
 
       <img
         v-if="set.logo_url || set.symbol_url"
-        :src="set.logo_url ?? set.symbol_url ?? undefined"
+        :src="cdnImage(set.logo_url ?? set.symbol_url, 400)"
         :alt="set.name"
         class="max-h-[65%] max-w-[70%] object-contain drop-shadow-lg transition-transform duration-300 group-hover:scale-105"
       />

@@ -25,6 +25,10 @@ function loadDotEnv(file) {
   }
 }
 
+// Même précédence que Vite : .env.local (non versionné, secrets locaux)
+// l'emporte sur .env. loadDotEnv n'écrase jamais une var déjà dans l'env,
+// donc en CI (secrets injectés) ces deux appels sont des no-op.
+loadDotEnv('.env.local')
 loadDotEnv('.env')
 
 // Réutilise VITE_SUPABASE_URL (non sensible, déjà public dans le bundle

@@ -10,6 +10,7 @@ import { SITE_URL, absoluteUrl, usePageSeo, useJsonLd } from '@/lib/seo'
 import { useAuthUser } from '@/composables/useAuthUser'
 import { useDeckDraft } from '@/composables/useDeckDraft'
 import { deckKeys, fetchDeckDetail } from '@/queries/decks'
+import { cdnImage } from '@/lib/imageCdn'
 import DeckBuilderCardTile from '@/components/deckbuilder/DeckBuilderCardTile.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import QueryState from '@/components/common/QueryState.vue'
@@ -147,7 +148,7 @@ function onDuplicate() {
         <span class="text-sm text-muted-foreground">{{ totalCards }} / {{ targetSize }} cartes</span>
         <div v-if="author" class="flex items-center gap-2">
           <Avatar class="size-6">
-            <AvatarImage v-if="author.avatar_url" :src="author.avatar_url" />
+            <AvatarImage v-if="author.avatar_url" :src="cdnImage(author.avatar_url, 96)!" />
             <AvatarFallback class="text-[10px]">{{ author.display_name.slice(0, 2).toUpperCase() }}</AvatarFallback>
           </Avatar>
           <span class="text-sm text-muted-foreground">{{ author.display_name }}</span>

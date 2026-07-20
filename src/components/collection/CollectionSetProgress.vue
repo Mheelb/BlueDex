@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { LayersIcon } from '@lucide/vue'
 import type { SetCollectionProgress } from '@/types/collection'
+import { cdnImage } from '@/lib/imageCdn'
 
 const props = defineProps<{ progress: SetCollectionProgress }>()
 
@@ -17,7 +18,7 @@ const percent = props.progress.total > 0 ? Math.round((props.progress.owned / pr
     >
       <img
         v-if="progress.set.logo_url || progress.set.symbol_url"
-        :src="progress.set.logo_url ?? progress.set.symbol_url ?? undefined"
+        :src="cdnImage(progress.set.logo_url ?? progress.set.symbol_url, 96)"
         :alt="progress.set.name"
         class="max-h-[70%] max-w-[70%] object-contain"
       />

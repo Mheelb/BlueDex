@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { useAuthUser } from '@/composables/useAuthUser'
 import { setKeys, fetchSets } from '@/queries/sets'
-import { cardKeys, fetchAllCardsWithSet } from '@/queries/cards'
+import { cardKeys, fetchCardSetIndex } from '@/queries/cards'
 import { collectionKeys, fetchMyCollection } from '@/queries/collection'
 import type { SetCollectionProgress } from '@/types/collection'
 import { usePageSeo } from '@/lib/seo'
@@ -34,8 +34,8 @@ const {
   isPending: cardsLoading,
   error: cardsError,
 } = useQuery({
-  queryKey: cardKeys.allWithSet(),
-  queryFn: () => fetchAllCardsWithSet(),
+  queryKey: cardKeys.setIndex(),
+  queryFn: fetchCardSetIndex,
 })
 
 const {

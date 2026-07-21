@@ -233,7 +233,7 @@ const saveMutation = useMutation({
     return { isCreate }
   },
   onSuccess: async ({ isCreate }) => {
-    queryClient.invalidateQueries({ queryKey: cardKeys.bySet(setId.value ?? '') })
+    queryClient.invalidateQueries({ queryKey: cardKeys.all })
     if (isCreate) {
       await syncCardCount((cards.value?.length ?? 0) + 1)
     }
@@ -259,7 +259,7 @@ const deleteMutation = useMutation({
     await deleteCardImage(card.image_url)
   },
   onSuccess: async () => {
-    queryClient.invalidateQueries({ queryKey: cardKeys.bySet(setId.value ?? '') })
+    queryClient.invalidateQueries({ queryKey: cardKeys.all })
     await syncCardCount((cards.value?.length ?? 0) - 1)
   },
   onError: (err) => {

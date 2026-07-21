@@ -20,8 +20,13 @@ const WIDTH = 560
 const HEIGHT = 200
 const PADDING_X = 12
 const PADDING_Y = 24
+// Marge sous le prix le plus bas : évite que la courbe et son étiquette se superposent
+// quand le prix reste au minimum, et laisse respirer le dégradé.
+const BOTTOM_GAP = 28
 const INNER_WIDTH = WIDTH - PADDING_X * 2
-const INNER_HEIGHT = HEIGHT - PADDING_Y * 2
+const INNER_HEIGHT = HEIGHT - PADDING_Y * 2 - BOTTOM_GAP
+
+const gradientId = computed(() => `price-area-${props.cardId.replace(/[^a-zA-Z0-9_-]/g, '')}`)
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
@@ -46,14 +51,26 @@ const chart = computed(() => {
   const coords = points.value.map((p, i) => ({ ...p, x: xForIndex(i), y: yForPrice(p.median) }))
   const linePath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(' ')
 
-  const gridLines = [minPrice, (minPrice + maxPrice) / 2, maxPrice].map((price) => ({
-    price,
-    y: yForPrice(price),
-  }))
+  const baseline = HEIGHT - PADDING_Y
+  const first = coords[0]
+  const lastCoord = coords[coords.length - 1]
+  const areaPath = `${linePath} L ${lastCoord.x.toFixed(1)} ${baseline} L ${first.x.toFixed(1)} ${baseline} Z`
 
-  const last = coords[coords.length - 1]
+  // Si le prix ne bouge pas, les trois repères se confondent : on n'en garde qu'un.
+  const gridPrices =
+    maxPrice - minPrice < 0.005 ? [minPrice] : [minPrice, (minPrice + maxPrice) / 2, maxPrice]
+  const lastLabelY = lastCoord.y - 10
+  const gridLines = gridPrices.map((price) => {
+    const y = yForPrice(price)
+    // L'étiquette du minimum passe sous sa ligne, sinon elle chevauche la courbe
+    // qui longe ce même niveau.
+    const labelY = price === minPrice ? y + 12 : y - 4
+    // Les repères partagent la colonne de droite avec l'étiquette du dernier prix :
+    // on masque celui qui tomberait dessus.
+    return { price, y, labelY, showLabel: Math.abs(labelY - lastLabelY) > 10 }
+  })
 
-  return { coords, linePath, gridLines, minPrice, maxPrice, last }
+  return { coords, linePath, areaPath, gridLines, minPrice, maxPrice, last: lastCoord }
 })
 
 const hoverIndex = ref<number | null>(null)
@@ -115,6 +132,13 @@ const hovered = computed(() => (chart.value && hoverIndex.value !== null ? chart
         @pointermove="onPointerMove"
         @pointerleave="onPointerLeave"
       >
+        <defs>
+          <linearGradient :id="gradientId" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--color-primary)" stop-opacity="0.28" />
+            <stop offset="100%" stop-color="var(--color-primary)" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+
         <line
           v-for="line in chart.gridLines"
           :key="line.price"
@@ -126,10 +150,10 @@ const hovered = computed(() => (chart.value && hoverIndex.value !== null ? chart
           stroke-width="1"
         />
         <text
-          v-for="line in chart.gridLines"
+          v-for="line in chart.gridLines.filter((l) => l.showLabel)"
           :key="`label-${line.price}`"
           :x="WIDTH - PADDING_X"
-          :y="line.y - 4"
+          :y="line.labelY"
           text-anchor="end"
           class="fill-muted-foreground text-[9px]"
         >
@@ -145,6 +169,8 @@ const hovered = computed(() => (chart.value && hoverIndex.value !== null ? chart
           stroke="var(--border)"
           stroke-width="1"
         />
+
+        <path :d="chart.areaPath" :fill="`url(#${gradientId})`" stroke="none" />
 
         <path
           :d="chart.linePath"

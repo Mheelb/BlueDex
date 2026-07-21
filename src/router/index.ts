@@ -101,6 +101,16 @@ const router = createRouter({
       component: () => import('@/views/admin/AdminArticlesView.vue'),
     },
     {
+      path: '/admin/partie',
+      name: 'admin-game',
+      component: () => import('@/views/admin/AdminGameView.vue'),
+    },
+    {
+      path: '/admin/partie-ia',
+      name: 'admin-game-ai',
+      component: () => import('@/views/admin/AdminGameAIView.vue'),
+    },
+    {
       path: '/mentions-legales',
       name: 'legal-notice',
       component: () => import('@/views/legal/LegalNoticeView.vue'),
@@ -124,7 +134,12 @@ router.beforeEach(async (to) => {
     to.name === 'deck-builder-edit' ||
     to.name === 'collection' ||
     to.name === 'profile'
-  const requiresAdmin = to.name === 'admin-sets' || to.name === 'admin-set-cards' || to.name === 'admin-articles'
+  const requiresAdmin =
+    to.name === 'admin-sets' ||
+    to.name === 'admin-set-cards' ||
+    to.name === 'admin-articles' ||
+    to.name === 'admin-game' ||
+    to.name === 'admin-game-ai'
   if (!requiresSession && !requiresAdmin) return true
 
   const { data } = await supabase.auth.getSession()

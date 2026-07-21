@@ -20,8 +20,6 @@ const WIDTH = 560
 const HEIGHT = 200
 const PADDING_X = 12
 const PADDING_Y = 24
-// Marge sous le prix le plus bas : évite que la courbe et son étiquette se superposent
-// quand le prix reste au minimum, et laisse respirer le dégradé.
 const BOTTOM_GAP = 28
 const INNER_WIDTH = WIDTH - PADDING_X * 2
 const INNER_HEIGHT = HEIGHT - PADDING_Y * 2 - BOTTOM_GAP
@@ -56,17 +54,12 @@ const chart = computed(() => {
   const lastCoord = coords[coords.length - 1]
   const areaPath = `${linePath} L ${lastCoord.x.toFixed(1)} ${baseline} L ${first.x.toFixed(1)} ${baseline} Z`
 
-  // Si le prix ne bouge pas, les trois repères se confondent : on n'en garde qu'un.
   const gridPrices =
     maxPrice - minPrice < 0.005 ? [minPrice] : [minPrice, (minPrice + maxPrice) / 2, maxPrice]
   const lastLabelY = lastCoord.y - 10
   const gridLines = gridPrices.map((price) => {
     const y = yForPrice(price)
-    // L'étiquette du minimum passe sous sa ligne, sinon elle chevauche la courbe
-    // qui longe ce même niveau.
     const labelY = price === minPrice ? y + 12 : y - 4
-    // Les repères partagent la colonne de droite avec l'étiquette du dernier prix :
-    // on masque celui qui tomberait dessus.
     return { price, y, labelY, showLabel: Math.abs(labelY - lastLabelY) > 10 }
   })
 

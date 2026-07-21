@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { LayoutDashboardIcon, LibraryIcon, LogOutIcon, NewspaperIcon, UserIcon } from '@lucide/vue'
+import { BotIcon, LayoutDashboardIcon, LibraryIcon, LogOutIcon, NewspaperIcon, SwordsIcon, UserIcon } from '@lucide/vue'
 import { useAuthUser } from '@/composables/useAuthUser'
 import { useProfile } from '@/composables/useProfile'
 import { supabase } from '@/lib/supabase'
@@ -71,6 +71,18 @@ async function onLogout() {
           <RouterLink :to="{ name: 'admin-articles' }">
             <NewspaperIcon />
             Articles
+          </RouterLink>
+        </DropdownMenuItem>
+        <DropdownMenuItem as-child>
+          <RouterLink :to="{ name: 'admin-game' }">
+            <SwordsIcon />
+            Partie test
+          </RouterLink>
+        </DropdownMenuItem>
+        <DropdownMenuItem as-child>
+          <RouterLink :to="{ name: 'admin-game-ai' }">
+            <BotIcon />
+            Partie vs IA
           </RouterLink>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

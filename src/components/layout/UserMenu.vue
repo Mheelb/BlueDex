@@ -5,6 +5,7 @@ import { LayoutDashboardIcon, LibraryIcon, LogOutIcon, NewspaperIcon, UserIcon }
 import { useAuthUser } from '@/composables/useAuthUser'
 import { useProfile } from '@/composables/useProfile'
 import { supabase } from '@/lib/supabase'
+import { cdnImage } from '@/lib/imageCdn'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -36,7 +37,7 @@ async function onLogout() {
     <DropdownMenuTrigger as-child>
       <button class="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <Avatar>
-          <AvatarImage v-if="profile?.avatar_url" :src="profile.avatar_url" />
+          <AvatarImage v-if="profile?.avatar_url" :src="cdnImage(profile.avatar_url, 96)!" />
           <AvatarFallback class="bg-primary text-primary-foreground">{{ userInitials }}</AvatarFallback>
         </Avatar>
       </button>

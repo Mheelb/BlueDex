@@ -7,6 +7,7 @@ import { toast } from 'vue-sonner'
 import { supabase } from '@/lib/supabase'
 import { convertImageToWebP } from '@/lib/imageCompression'
 import { uploadAvatar } from '@/lib/avatarStorage'
+import { cdnImage } from '@/lib/imageCdn'
 import { updateProfile, profileKeys } from '@/queries/profile'
 import { useAuthUser } from '@/composables/useAuthUser'
 import { useProfile } from '@/composables/useProfile'
@@ -157,7 +158,7 @@ const savePasswordMutation = useMutation({
                   <Avatar>
                     <AvatarImage
                       v-if="avatarPreview ?? profile?.avatar_url"
-                      :src="avatarPreview ?? profile!.avatar_url!"
+                      :src="(avatarPreview ?? cdnImage(profile!.avatar_url!, 128))!"
                     />
                     <AvatarFallback class="bg-primary text-primary-foreground">
                       {{ (profile?.display_name ?? '?').slice(0, 2).toUpperCase() }}

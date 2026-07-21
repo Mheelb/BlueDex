@@ -9,6 +9,7 @@ import { useSetBySlug } from '@/composables/useSetBySlug'
 import { cardKeys, fetchCardsBySet } from '@/queries/cards'
 import { collectionKeys, fetchMyCollection, toggleCollectionOwned } from '@/queries/collection'
 import { usePageSeo } from '@/lib/seo'
+import { cdnImage } from '@/lib/imageCdn'
 import CardFilters from '@/components/cards/CardFilters.vue'
 import CardTile from '@/components/cards/CardTile.vue'
 import VirtualCardGrid from '@/components/cards/VirtualCardGrid.vue'
@@ -94,7 +95,7 @@ usePageSeo({
     <BackButton :to="{ name: 'sets' }" label="Retour aux sets" class="mb-2" />
 
     <div class="mb-6 flex items-center gap-4">
-      <img v-if="set.symbol_url" :src="set.symbol_url" :alt="set.name" class="h-10 w-10 object-contain" />
+      <img v-if="set.symbol_url" :src="cdnImage(set.symbol_url, 96)" :alt="set.name" class="h-10 w-10 object-contain" />
       <div>
         <Heading>{{ set.name }}</Heading>
         <p class="mt-0.5 text-sm text-muted-foreground">

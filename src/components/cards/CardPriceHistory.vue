@@ -57,8 +57,7 @@ const chart = computed(() => {
   const areaPath = `${linePath} L ${lastCoord.x.toFixed(1)} ${baseline} L ${first.x.toFixed(1)} ${baseline} Z`
 
   // Si le prix ne bouge pas, les trois repères se confondent : on n'en garde qu'un.
-  const gridPrices =
-    maxPrice - minPrice < 0.005 ? [minPrice] : [minPrice, (minPrice + maxPrice) / 2, maxPrice]
+  const gridPrices = maxPrice - minPrice < 0.005 ? [minPrice] : [minPrice, (minPrice + maxPrice) / 2, maxPrice]
   const lastLabelY = lastCoord.y - 10
   const gridLines = gridPrices.map((price) => {
     const y = yForPrice(price)

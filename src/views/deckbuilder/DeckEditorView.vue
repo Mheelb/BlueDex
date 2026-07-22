@@ -5,10 +5,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { CheckIcon, CircleAlertIcon, CopyIcon, DownloadIcon, StarIcon } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import type { Card } from '@/types/card'
-import { createEmptyCardFilters } from '@/types/card'
 import type { DeckEntry, DeckFormat } from '@/types/deck'
 import { DECK_FORMATS, DECK_FORMAT_LABELS, DECK_FORMAT_RULES } from '@/types/deck'
 import { filterAndSortCards } from '@/lib/filterCards'
+import { useCardFiltersQuery } from '@/composables/useCardFiltersQuery'
 import { canAddCard, getDeckIssues, isDeckLegal } from '@/lib/deckValidation'
 import { deckExportFilename, formatDeckExport } from '@/lib/deckExport'
 import { useAuthUser } from '@/composables/useAuthUser'
@@ -109,16 +109,16 @@ const { data: collection } = useQuery({
   enabled: computed(() => !!userId.value),
 })
 const collectionMap = computed(() => collection.value ?? new Map<string, number>())
-const ownedOnly = ref(false)
+
+const { filters, flags } = useCardFiltersQuery({ flags: ['owned'] })
 
 function ownedQuantity(cardId: string) {
   return collectionMap.value.get(cardId) ?? 0
 }
 
-const filters = ref(createEmptyCardFilters())
 const filteredCards = computed(() => {
   const base = filterAndSortCards(allCards.value ?? [], filters.value)
-  return ownedOnly.value ? base.filter((card) => collectionMap.value.has(card.id)) : base
+  return flags.owned ? base.filter((card) => collectionMap.value.has(card.id)) : base
 })
 
 const CATALOG_PAGE_SIZE = 20
@@ -129,7 +129,7 @@ const paginatedCards = computed(() => {
   return filteredCards.value.slice(start, start + CATALOG_PAGE_SIZE)
 })
 
-watch([filters, ownedOnly], () => {
+watch([filters, () => flags.owned], () => {
   catalogPage.value = 0
 })
 
@@ -142,7 +142,7 @@ function quantityInDeck(cardId: string) {
 }
 
 function exceedsOwnedQuantity(card: Card) {
-  return ownedOnly.value && (quantityInDeck(card.id) ?? 0) >= ownedQuantity(card.id)
+  return flags.owned && (quantityInDeck(card.id) ?? 0) >= ownedQuantity(card.id)
 }
 
 function isCardDisabled(card: Card) {
@@ -218,7 +218,7 @@ const saveMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: deckKeys.all })
     toast.success('Deck enregistré.')
     if (!props.deckId) {
-      router.replace({ name: 'deck-builder-edit', params: { deckId } })
+      router.replace({ name: 'deck-builder-edit', params: { deckId }, query: router.currentRoute.value.query })
     }
   },
   onError: (err) => {
@@ -274,7 +274,7 @@ function onExport() {
         <CardFilters v-model="filters" :cards="allCards" class="mb-4">
           <template v-if="userId" #extra>
             <label class="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
-              <Checkbox :model-value="ownedOnly" @update:model-value="(v) => (ownedOnly = !!v)" />
+              <Checkbox :model-value="flags.owned" @update:model-value="(v) => (flags.owned = !!v)" />
               Cartes possédées uniquement
             </label>
           </template>

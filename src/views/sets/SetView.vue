@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { toast } from 'vue-sonner'
-import { createEmptyCardFilters } from '@/types/card'
 import { filterAndSortCards } from '@/lib/filterCards'
+import { useCardFiltersQuery } from '@/composables/useCardFiltersQuery'
 import { useAuthUser } from '@/composables/useAuthUser'
 import { useSetBySlug } from '@/composables/useSetBySlug'
 import { cardKeys, fetchCardsBySet } from '@/queries/cards'
@@ -36,15 +36,7 @@ const {
 const loading = computed(() => setLoading.value || (!!setId.value && cardsLoading.value))
 const error = computed(() => setError.value?.message ?? cardsError.value?.message ?? null)
 
-const filters = ref(createEmptyCardFilters())
-const missingOnly = ref(false)
-watch(
-  () => props.setSlug,
-  () => {
-    filters.value = createEmptyCardFilters()
-    missingOnly.value = false
-  },
-)
+const { filters, flags } = useCardFiltersQuery({ flags: ['missing'] })
 
 const { session } = useAuthUser()
 const userId = computed(() => session.value?.user.id)
@@ -61,7 +53,7 @@ const ownedInSet = computed(() => (cards.value ?? []).filter((card) => collectio
 
 const filteredCards = computed(() => {
   const base = filterAndSortCards(cards.value ?? [], filters.value)
-  return missingOnly.value ? base.filter((card) => !collectionMap.value.has(card.id)) : base
+  return flags.missing ? base.filter((card) => !collectionMap.value.has(card.id)) : base
 })
 
 const toggleOwnedMutation = useMutation({
@@ -116,7 +108,7 @@ usePageSeo({
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <CardFilters v-model="filters" :cards="cards" class="w-full sm:flex-1" />
       <label v-if="userId" class="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
-        <Checkbox :model-value="missingOnly" @update:model-value="(v) => (missingOnly = !!v)" />
+        <Checkbox :model-value="flags.missing" @update:model-value="(v) => (flags.missing = !!v)" />
         Cartes manquantes uniquement
       </label>
     </div>

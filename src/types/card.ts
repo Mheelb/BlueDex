@@ -60,7 +60,8 @@ export interface Card {
   artist: string | null
 }
 
-export type CardSort = 'number-asc' | 'number-desc' | 'name-asc' | 'name-desc'
+export const CARD_SORTS = ['number-asc', 'number-desc', 'name-asc', 'name-desc'] as const
+export type CardSort = (typeof CARD_SORTS)[number]
 
 export const COST_RANGE = [0, 10] as const
 export const POWER_RANGE = [0, 10] as const

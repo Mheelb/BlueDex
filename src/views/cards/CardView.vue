@@ -79,7 +79,11 @@ usePageSeo({
 <template>
   <QueryState :loading="loading" :error="error">
     <template v-if="card && set">
-      <BackButton :to="{ name: 'set', params: { setSlug: set.slug } }" :label="`Retour à ${set.name}`" class="mb-6" />
+      <BackButton
+        :to="{ name: 'set', params: { setSlug: set.slug }, query: $route.query }"
+        :label="`Retour à ${set.name}`"
+        class="mb-6"
+      />
 
       <div class="grid grid-cols-1 gap-10 md:grid-cols-2">
         <div class="mx-auto w-full max-w-sm">

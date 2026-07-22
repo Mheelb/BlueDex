@@ -4,11 +4,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useForm } from '@tanstack/vue-form'
 import { PencilIcon, SparklesIcon, Trash2Icon, UploadIcon } from '@lucide/vue'
 import { toast } from 'vue-sonner'
-import { supabase } from '@/lib/supabase'
 import { convertImageToWebP } from '@/lib/imageCompression'
 import { deleteArticleImage, uploadArticleImage } from '@/lib/articleImageStorage'
 import type { Article } from '@/types/article'
-import { articleKeys, fetchAdminArticles } from '@/queries/articles'
+import {
+  articleKeys,
+  deleteArticle,
+  fetchAdminArticles,
+  generateArticle,
+  setArticleStatus,
+  updateArticle,
+} from '@/queries/articles'
 import { required } from '@/lib/formValidators'
 import BackButton from '@/components/common/BackButton.vue'
 import { Card, CardContent } from '@/components/ui/card'
@@ -73,8 +79,7 @@ const genSources = ref('')
 
 const generateMutation = useMutation({
   mutationFn: async (payload: { subject: string; sources: string[] }) => {
-    const { error: invokeError } = await supabase.functions.invoke('generate-article', { body: payload })
-    if (invokeError) throw new Error(invokeError.message)
+    await generateArticle(payload)
   },
   onSuccess: () => {
     // La génération tourne en tâche de fond côté edge function : la réponse est
@@ -114,18 +119,13 @@ const saveMutation = useMutation({
       cover_image_url = await uploadArticleImage(path, imageFile.value)
     }
 
-    const { error: saveError } = await supabase
-      .from('articles')
-      .update({
-        title: value.title,
-        slug: value.slug,
-        excerpt: value.excerpt,
-        content: value.content,
-        ...(cover_image_url ? { cover_image_url } : {}),
-      })
-      .eq('id', editingId.value)
-
-    if (saveError) throw new Error(saveError.message)
+    await updateArticle(editingId.value, {
+      title: value.title,
+      slug: value.slug,
+      excerpt: value.excerpt,
+      content: value.content,
+      ...(cover_image_url ? { cover_image_url } : {}),
+    })
 
     if (cover_image_url && editingImageUrl.value) {
       await deleteArticleImage(editingImageUrl.value)
@@ -176,15 +176,7 @@ function openEditSheet(article: Article) {
 const togglePublishMutation = useMutation({
   mutationFn: async (article: Article) => {
     const nextStatus = article.status === 'published' ? 'draft' : 'published'
-    const { error: updateError } = await supabase
-      .from('articles')
-      .update({
-        status: nextStatus,
-        published_at: nextStatus === 'published' ? new Date().toISOString() : null,
-      })
-      .eq('id', article.id)
-
-    if (updateError) throw new Error(updateError.message)
+    await setArticleStatus(article.id, nextStatus)
   },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: articleKeys.all })
@@ -200,8 +192,7 @@ function onTogglePublish(article: Article) {
 
 const deleteMutation = useMutation({
   mutationFn: async (article: Article) => {
-    const { error: deleteError } = await supabase.from('articles').delete().eq('id', article.id)
-    if (deleteError) throw new Error(deleteError.message)
+    await deleteArticle(article.id)
   },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: articleKeys.all })

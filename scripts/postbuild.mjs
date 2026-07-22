@@ -13,6 +13,7 @@ import { dirname, resolve } from 'node:path'
 import { marked } from 'marked'
 import { JSDOM } from 'jsdom'
 import DOMPurify from 'dompurify'
+import { CARD_SYMBOLS, escapeAttr, escapeHtml, jsonLdScript, urlEntry } from './lib/prerender.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = resolve(__dirname, '..')
@@ -41,14 +42,8 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY
 
 // --- Rendu markdown (miroir Node de src/lib/markdown.ts) ------------------
-// Doit rester synchro avec src/lib/cardSymbols.ts (CARD_SYMBOLS).
-const CARD_SYMBOLS = {
-  rotation: '/symbols/rotation.png',
-  '0power': '/symbols/0power.svg',
-  '1power': '/symbols/1power.svg',
-  '0soutien': '/symbols/0soutien.svg',
-  '1soutien': '/symbols/1soutien.svg',
-}
+// CARD_SYMBOLS vit dans ./lib/prerender.mjs et est vérifié synchro avec
+// src/lib/cardSymbols.ts par prerender.spec.mjs.
 const SYMBOL_PATTERN = /:([a-z0-9_-]+):/gi
 const purify = DOMPurify(new JSDOM('').window)
 
@@ -69,18 +64,6 @@ function demoteHeadings(html) {
 function renderMarkdown(source) {
   const html = marked.parse(source ?? '', { async: false })
   return purify.sanitize(demoteHeadings(replaceCardSymbols(html)))
-}
-
-// --- Helpers d'échappement ------------------------------------------------
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-}
-
-function escapeAttr(value) {
-  return escapeHtml(value).replace(/"/g, '&quot;')
 }
 
 function absoluteUrl(path) {
@@ -158,11 +141,7 @@ function buildHead({ title, titleOverride, description, canonical, image, type =
     `<meta name="twitter:image" content="${escapeAttr(img)}" />`,
   ]
   if (publishedTime) tags.push(`<meta property="article:published_time" content="${escapeAttr(publishedTime)}" />`)
-  if (jsonLd) {
-    // Neutralise toute fermeture </script> dans le JSON.
-    const safe = JSON.stringify(jsonLd).replace(/</g, '\\u003c')
-    tags.push(`<script type="application/ld+json">${safe}</script>`)
-  }
+  if (jsonLd) tags.push(jsonLdScript(jsonLd))
   return { fullTitle, description: desc, tags: tags.join('\n    ') }
 }
 
@@ -192,6 +171,29 @@ function homeBody() {
     '<p><a href="/sets">Tous les sets</a> · <a href="/decks">Deck builder</a> · <a href="/actus">Articles</a></p>',
     '</main>',
   ].join('\n')
+}
+
+function siteJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${SITE_URL}/#organization`,
+        name: SITE_NAME,
+        url: SITE_URL,
+        logo: `${SITE_URL}/favicon-512.png`,
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE_URL}/#website`,
+        name: SITE_NAME,
+        url: SITE_URL,
+        publisher: { '@id': `${SITE_URL}/#organization` },
+        inLanguage: 'fr-FR',
+      },
+    ],
+  }
 }
 
 function articleBody(article, contentHtml) {
@@ -302,14 +304,6 @@ const staticRoutes = [
   { path: '/mentions-legales', changefreq: 'yearly', priority: '0.2' },
   { path: '/confidentialite', changefreq: 'yearly', priority: '0.2' },
 ]
-
-function urlEntry({ loc, lastmod, changefreq, priority }) {
-  const parts = [`    <loc>${loc}</loc>`]
-  if (lastmod) parts.push(`    <lastmod>${lastmod}</lastmod>`)
-  if (changefreq) parts.push(`    <changefreq>${changefreq}</changefreq>`)
-  if (priority) parts.push(`    <priority>${priority}</priority>`)
-  return `  <url>\n${parts.join('\n')}\n  </url>`
-}
 
 function writeSitemap({ articles, sets, cards, decks }) {
   const entries = [
@@ -479,6 +473,7 @@ async function main() {
       description:
         'BlueDex : la base de données et le deck builder communautaires du TCG Blue Rising (Karmine Corp). Parcours tous les sets et cartes, construis tes decks et suis l’actu du jeu.',
       body: homeBody(),
+      jsonLd: siteJsonLd(),
     },
     {
       path: '/actus',
@@ -505,6 +500,7 @@ async function main() {
       titleOverride: page.titleOverride,
       description: page.description,
       canonical,
+      jsonLd: page.jsonLd,
     })
     const html = applyToTemplate(template, head, page.body)
     if (page.path === '/') writeFileSync(templatePath, html)

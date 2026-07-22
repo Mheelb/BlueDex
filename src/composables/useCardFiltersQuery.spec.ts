@@ -84,4 +84,14 @@ describe('useCardFiltersQuery', () => {
     expect(router.currentRoute.value.query.ref).toBe('share')
     expect(router.currentRoute.value.query.q).toBe('x')
   })
+
+  it('reset() efface filtres et drapeaux mais garde les paramètres non gérés', async () => {
+    const { api, router } = await setup('/sets/base?q=aile&rarity=rare&missing=1&ref=share')
+    api().reset()
+    await flushPromises()
+    expect(router.currentRoute.value.query.q).toBeUndefined()
+    expect(router.currentRoute.value.query.rarity).toBeUndefined()
+    expect(router.currentRoute.value.query.missing).toBeUndefined()
+    expect(router.currentRoute.value.query.ref).toBe('share')
+  })
 })

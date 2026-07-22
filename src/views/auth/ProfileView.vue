@@ -5,6 +5,7 @@ import { useForm } from '@tanstack/vue-form'
 import { UploadIcon } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import { supabase } from '@/lib/supabase'
+import { toUserMessage } from '@/lib/errorMessage'
 import { convertImageToWebP } from '@/lib/imageCompression'
 import { uploadAvatar } from '@/lib/avatarStorage'
 import { cdnImage } from '@/lib/imageCdn'
@@ -86,7 +87,7 @@ const saveProfileMutation = useMutation({
     toast.success('Profil mis à jour.')
   },
   onError: (err) => {
-    toast.error(err.message)
+    toast.error(toUserMessage(err))
   },
 })
 
@@ -115,7 +116,7 @@ const savePasswordMutation = useMutation({
     toast.success('Mot de passe mis à jour.')
   },
   onError: (err) => {
-    toast.error(err.message)
+    toast.error(toUserMessage(err))
   },
 })
 </script>

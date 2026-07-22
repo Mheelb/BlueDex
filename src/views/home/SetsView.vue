@@ -10,7 +10,7 @@ import { articleKeys, fetchPublishedArticles } from '@/queries/articles'
 import { cardKeys, fetchFeaturedCards } from '@/queries/cards'
 import { withLoopPadding } from '@/lib/carouselLoop'
 import { cdnImage } from '@/lib/imageCdn'
-import { usePageSeo } from '@/lib/seo'
+import { SITE_NAME, SITE_URL, usePageSeo, useJsonLd } from '@/lib/seo'
 import HomeHero from '@/components/home/HomeHero.vue'
 import SetCard from '@/components/sets/SetCard.vue'
 import QueryState from '@/components/common/QueryState.vue'
@@ -22,6 +22,27 @@ usePageSeo({
   description:
     'BlueDex : la base de données et le deck builder communautaires du TCG Blue Rising (Karmine Corp). Parcours tous les sets et cartes, construis tes decks et suis l’actu du jeu.',
   path: '/',
+})
+
+useJsonLd({
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: `${SITE_URL}/favicon-512.png`,
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      publisher: { '@id': `${SITE_URL}/#organization` },
+      inLanguage: 'fr-FR',
+    },
+  ],
 })
 
 const {

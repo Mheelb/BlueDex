@@ -1,5 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { supabase } from '@/lib/supabase'
+import { ensureAuthReady, useAuthUser } from '@/composables/useAuthUser'
+import { queryClient } from '@/lib/queryClient'
+import { fetchProfile, profileKeys } from '@/queries/profile'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth?: boolean
+    requiresAdmin?: boolean
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -28,12 +37,14 @@ const router = createRouter({
       path: '/decks/builder',
       name: 'deck-builder-new',
       component: () => import('@/views/deckbuilder/DeckEditorView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/decks/builder/:deckId',
       name: 'deck-builder-edit',
       component: () => import('@/views/deckbuilder/DeckEditorView.vue'),
       props: true,
+      meta: { requiresAuth: true },
     },
     {
       path: '/decks/:deckId',
@@ -45,6 +56,7 @@ const router = createRouter({
       path: '/collection',
       name: 'collection',
       component: () => import('@/views/collection/CollectionView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/actus',
@@ -83,22 +95,26 @@ const router = createRouter({
       path: '/profil',
       name: 'profile',
       component: () => import('@/views/auth/ProfileView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/admin/sets',
       name: 'admin-sets',
       component: () => import('@/views/admin/AdminSetsView.vue'),
+      meta: { requiresAdmin: true },
     },
     {
       path: '/admin/sets/:setSlug',
       name: 'admin-set-cards',
       component: () => import('@/views/admin/AdminSetCardsView.vue'),
       props: true,
+      meta: { requiresAdmin: true },
     },
     {
       path: '/admin/articles',
       name: 'admin-articles',
       component: () => import('@/views/admin/AdminArticlesView.vue'),
+      meta: { requiresAdmin: true },
     },
     {
       path: '/mentions-legales',
@@ -119,22 +135,27 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  const requiresSession =
-    to.name === 'deck-builder-new' ||
-    to.name === 'deck-builder-edit' ||
-    to.name === 'collection' ||
-    to.name === 'profile'
-  const requiresAdmin = to.name === 'admin-sets' || to.name === 'admin-set-cards' || to.name === 'admin-articles'
-  if (!requiresSession && !requiresAdmin) return true
+  const requiresAuth = to.meta.requiresAuth ?? false
+  const requiresAdmin = to.meta.requiresAdmin ?? false
+  if (!requiresAuth && !requiresAdmin) return true
 
-  const { data } = await supabase.auth.getSession()
-  if (!data.session) {
+  await ensureAuthReady()
+  const { session } = useAuthUser()
+  if (!session.value) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
   if (requiresAdmin) {
-    const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', data.session.user.id).single()
-    if (!profile?.is_admin) {
+    const userId = session.value.user.id
+    try {
+      const profile = await queryClient.ensureQueryData({
+        queryKey: profileKeys.detail(userId),
+        queryFn: () => fetchProfile(userId),
+      })
+      if (!profile.is_admin) {
+        return { name: 'login', query: { redirect: to.fullPath } }
+      }
+    } catch {
       return { name: 'login', query: { redirect: to.fullPath } }
     }
   }

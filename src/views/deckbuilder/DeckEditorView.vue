@@ -8,15 +8,18 @@ import type { Card } from '@/types/card'
 import type { DeckEntry, DeckFormat } from '@/types/deck'
 import { DECK_FORMATS, DECK_FORMAT_LABELS, DECK_FORMAT_RULES } from '@/types/deck'
 import { filterAndSortCards } from '@/lib/filterCards'
+import { toUserMessage } from '@/lib/errorMessage'
 import { useCardFiltersQuery } from '@/composables/useCardFiltersQuery'
 import { canAddCard, getDeckIssues, isDeckLegal } from '@/lib/deckValidation'
 import { deckExportFilename, formatDeckExport } from '@/lib/deckExport'
 import { useAuthUser } from '@/composables/useAuthUser'
+import { useMyCollection } from '@/composables/useMyCollection'
 import { useDeckDraft } from '@/composables/useDeckDraft'
 import { cardKeys, fetchAllCardsWithSet } from '@/queries/cards'
-import { collectionKeys, fetchMyCollection } from '@/queries/collection'
 import { deckKeys, fetchDeckWithCards, saveDeck } from '@/queries/decks'
 import CardFilters from '@/components/cards/CardFilters.vue'
+import CardGridSkeleton from '@/components/cards/CardGridSkeleton.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import SelectField from '@/components/form/SelectField.vue'
 import type { SelectFieldOption } from '@/components/form/SelectField.vue'
 import DeckBuilderCardTile from '@/components/deckbuilder/DeckBuilderCardTile.vue'
@@ -33,7 +36,6 @@ const props = defineProps<{ deckId?: string }>()
 const router = useRouter()
 const queryClient = useQueryClient()
 const { session } = useAuthUser()
-const userId = computed(() => session.value?.user.id)
 
 const isEditing = computed(() => !!props.deckId)
 
@@ -103,18 +105,9 @@ const { data: allCards, isPending: catalogueLoading } = useQuery({
 
 const mobilePanel = ref<'catalogue' | 'deck'>('catalogue')
 
-const { data: collection } = useQuery({
-  queryKey: computed(() => collectionKeys.mine(userId.value ?? '')),
-  queryFn: () => fetchMyCollection(userId.value!),
-  enabled: computed(() => !!userId.value),
-})
-const collectionMap = computed(() => collection.value ?? new Map<string, number>())
+const { userId, collectionMap, ownedQuantity } = useMyCollection()
 
-const { filters, flags } = useCardFiltersQuery({ flags: ['owned'] })
-
-function ownedQuantity(cardId: string) {
-  return collectionMap.value.get(cardId) ?? 0
-}
+const { filters, flags, reset: resetFilters } = useCardFiltersQuery({ flags: ['owned'] })
 
 const filteredCards = computed(() => {
   const base = filterAndSortCards(allCards.value ?? [], filters.value)
@@ -222,8 +215,8 @@ const saveMutation = useMutation({
     }
   },
   onError: (err) => {
-    error.value = err.message
-    toast.error(err.message)
+    error.value = toUserMessage(err)
+    toast.error(toUserMessage(err))
   },
 })
 
@@ -279,11 +272,18 @@ function onExport() {
             </label>
           </template>
         </CardFilters>
-        <QueryState
-          :loading="catalogueLoading"
-          :empty="filteredCards.length === 0"
-          empty-message="Aucune carte ne correspond aux filtres."
-        >
+        <QueryState :loading="catalogueLoading" :empty="filteredCards.length === 0">
+          <template #loading>
+            <CardGridSkeleton
+              :count="20"
+              class="grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-5"
+            />
+          </template>
+          <template #empty>
+            <EmptyState title="Aucune carte" message="Aucune carte ne correspond à tes filtres.">
+              <Button variant="outline" size="sm" @click="resetFilters">Réinitialiser les filtres</Button>
+            </EmptyState>
+          </template>
           <div class="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-4 md:grid-cols-5">
             <div v-for="card in paginatedCards" :key="card.id">
               <DeckBuilderCardTile

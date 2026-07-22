@@ -1,5 +1,10 @@
 <script setup lang="ts">
+import { useHead } from '@unhead/vue'
+import { usePageSeo } from '@/lib/seo'
 import { Button } from '@/components/ui/button'
+
+usePageSeo({ title: 'Page introuvable' })
+useHead({ meta: [{ name: 'robots', content: 'noindex' }] })
 </script>
 
 <template>

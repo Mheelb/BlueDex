@@ -3,9 +3,8 @@ import { reactive, ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useForm } from '@tanstack/vue-form'
 import { ImageDownIcon, ListIcon, PencilIcon, PlusIcon, Trash2Icon } from '@lucide/vue'
-import { supabase } from '@/lib/supabase'
 import type { CardSet } from '@/types/card'
-import { fetchSets, setKeys } from '@/queries/sets'
+import { createSet, deleteSet, fetchSets, setKeys, updateSet } from '@/queries/sets'
 import { cardKeys } from '@/queries/cards'
 import { migrateAllCardImages, type MigrationSummary } from '@/lib/imageMigration'
 import { required, slugPattern } from '@/lib/formValidators'
@@ -56,11 +55,8 @@ const saveMutation = useMutation({
       symbol_url: value.symbol_url || null,
     }
 
-    const { error: saveError } = editingId.value
-      ? await supabase.from('sets').update(payload).eq('id', editingId.value)
-      : await supabase.from('sets').insert({ ...payload, card_count: 0 })
-
-    if (saveError) throw new Error(saveError.message)
+    if (editingId.value) await updateSet(editingId.value, payload)
+    else await createSet(payload)
   },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: setKeys.all })
@@ -105,8 +101,7 @@ function openEditSheet(set: CardSet) {
 
 const deleteMutation = useMutation({
   mutationFn: async (set: CardSet) => {
-    const { error: deleteError } = await supabase.from('sets').delete().eq('id', set.id)
-    if (deleteError) throw new Error(deleteError.message)
+    await deleteSet(set.id)
   },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: setKeys.all })

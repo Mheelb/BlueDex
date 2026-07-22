@@ -5,6 +5,7 @@ import { usePageSeo } from '@/lib/seo'
 import SetsHero from '@/components/sets/SetsHero.vue'
 import SetCard from '@/components/sets/SetCard.vue'
 import QueryState from '@/components/common/QueryState.vue'
+import { Skeleton } from '@/components/ui/skeleton'
 
 usePageSeo({
   title: 'Tous les sets Blue Rising',
@@ -32,6 +33,11 @@ const {
     :empty="sets?.length === 0"
     empty-message="Aucun set pour le moment."
   >
+    <template #loading>
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
+        <Skeleton v-for="i in 6" :key="i" class="aspect-[4/3] w-full rounded-2xl" />
+      </div>
+    </template>
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       <SetCard v-for="set in sets ?? []" :key="set.id" :set="set" />
     </div>

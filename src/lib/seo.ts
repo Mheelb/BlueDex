@@ -75,7 +75,7 @@ export function useJsonLd(data: MaybeRefOrGetter<Record<string, unknown> | null 
         type: 'application/ld+json',
         innerHTML: () => {
           const value = toValue(data)
-          return value ? JSON.stringify(value) : ''
+          return value ? JSON.stringify(value).replace(/</g, '\\u003c') : ''
         },
       },
     ],

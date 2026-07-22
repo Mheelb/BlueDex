@@ -71,11 +71,11 @@ export async function saveDeck(
   entries: DeckEntry[],
 ): Promise<string> {
   const { data, error } = await supabase.rpc('save_deck', {
-    p_deck_id: deckId,
+    p_deck_id: deckId as string,
     p_name: name,
     p_format: format,
     p_is_public: isPublic,
-    p_cover_card_id: coverCardId,
+    p_cover_card_id: coverCardId as string,
     p_entries: entries.map((e) => ({ card_id: e.card.id, quantity: e.quantity })),
   })
   if (error || !data) throw new Error(error?.message ?? "Impossible d'enregistrer le deck.")

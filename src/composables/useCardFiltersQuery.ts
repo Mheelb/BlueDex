@@ -12,6 +12,7 @@ export interface UseCardFiltersQueryOptions {
 export interface UseCardFiltersQueryResult {
   filters: WritableComputedRef<CardFilters>
   flags: Record<string, boolean>
+  reset: () => void
 }
 
 export function useCardFiltersQuery(options: UseCardFiltersQueryOptions = {}): UseCardFiltersQueryResult {
@@ -52,5 +53,5 @@ export function useCardFiltersQuery(options: UseCardFiltersQueryOptions = {}): U
     })
   }
 
-  return { filters, flags }
+  return { filters, flags, reset: () => write({}) }
 }

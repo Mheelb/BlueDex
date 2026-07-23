@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { toast } from 'vue-sonner'
-import { useAuthUser } from '@/composables/useAuthUser'
+import { useQuery } from '@tanstack/vue-query'
+import { toUserMessage } from '@/lib/errorMessage'
+import { useMyCollection } from '@/composables/useMyCollection'
 import { useSetBySlug } from '@/composables/useSetBySlug'
 import { cardKeys, fetchCardByNumber } from '@/queries/cards'
-import { collectionKeys, fetchMyCollection, setCollectionQuantity } from '@/queries/collection'
 import { usePageSeo } from '@/lib/seo'
 import CardImage from '@/components/cards/CardImage.vue'
 import CardBadges from '@/components/cards/CardBadges.vue'
@@ -34,35 +33,17 @@ const {
 })
 
 const loading = computed(() => setLoading.value || (!!setId.value && cardLoading.value))
-const error = computed(() => setError.value?.message ?? cardError.value?.message ?? null)
-
-const { session } = useAuthUser()
-const userId = computed(() => session.value?.user.id)
-const queryClient = useQueryClient()
-
-const { data: collection } = useQuery({
-  queryKey: computed(() => collectionKeys.mine(userId.value ?? '')),
-  queryFn: () => fetchMyCollection(userId.value!),
-  enabled: computed(() => !!userId.value),
+const error = computed(() => {
+  const err = setError.value ?? cardError.value
+  return err ? toUserMessage(err) : null
 })
 
-const ownedQuantity = computed(() => (card.value ? (collection.value?.get(card.value.id) ?? 0) : 0))
+const { userId, ownedQuantity, setQuantity } = useMyCollection()
 
-const quantityMutation = useMutation({
-  mutationFn: (quantity: number) => {
-    if (!userId.value || !card.value) throw new Error('Connecte-toi pour gérer ta collection.')
-    return setCollectionQuantity(userId.value, card.value.id, quantity)
-  },
-  onSuccess: () => {
-    if (userId.value) queryClient.invalidateQueries({ queryKey: collectionKeys.mine(userId.value) })
-  },
-  onError: (err) => {
-    toast.error(err.message)
-  },
-})
+const cardQuantity = computed(() => (card.value ? ownedQuantity(card.value.id) : 0))
 
 function onUpdateQuantity(quantity: number) {
-  quantityMutation.mutate(quantity)
+  if (card.value) setQuantity(card.value.id, quantity)
 }
 
 usePageSeo({
@@ -79,7 +60,11 @@ usePageSeo({
 <template>
   <QueryState :loading="loading" :error="error">
     <template v-if="card && set">
-      <BackButton :to="{ name: 'set', params: { setSlug: set.slug } }" :label="`Retour à ${set.name}`" class="mb-6" />
+      <BackButton
+        :to="{ name: 'set', params: { setSlug: set.slug }, query: $route.query }"
+        :label="`Retour à ${set.name}`"
+        class="mb-6"
+      />
 
       <div class="grid grid-cols-1 gap-10 md:grid-cols-2">
         <div class="mx-auto w-full max-w-sm">
@@ -114,7 +99,7 @@ usePageSeo({
 
           <CollectionQuantityControl
             v-if="userId"
-            :quantity="ownedQuantity"
+            :quantity="cardQuantity"
             class="mt-6"
             @update:quantity="onUpdateQuantity"
           />

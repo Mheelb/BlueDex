@@ -5,18 +5,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { CheckIcon, CircleAlertIcon, CopyIcon, DownloadIcon, StarIcon } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import type { Card } from '@/types/card'
-import { createEmptyCardFilters } from '@/types/card'
 import type { DeckEntry, DeckFormat } from '@/types/deck'
 import { DECK_FORMATS, DECK_FORMAT_LABELS, DECK_FORMAT_RULES } from '@/types/deck'
 import { filterAndSortCards } from '@/lib/filterCards'
+import { toUserMessage } from '@/lib/errorMessage'
+import { useCardFiltersQuery } from '@/composables/useCardFiltersQuery'
 import { canAddCard, getDeckIssues, isDeckLegal } from '@/lib/deckValidation'
 import { deckExportFilename, formatDeckExport } from '@/lib/deckExport'
 import { useAuthUser } from '@/composables/useAuthUser'
+import { useMyCollection } from '@/composables/useMyCollection'
 import { useDeckDraft } from '@/composables/useDeckDraft'
 import { cardKeys, fetchAllCardsWithSet } from '@/queries/cards'
-import { collectionKeys, fetchMyCollection } from '@/queries/collection'
 import { deckKeys, fetchDeckWithCards, saveDeck } from '@/queries/decks'
 import CardFilters from '@/components/cards/CardFilters.vue'
+import CardGridSkeleton from '@/components/cards/CardGridSkeleton.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import SelectField from '@/components/form/SelectField.vue'
 import type { SelectFieldOption } from '@/components/form/SelectField.vue'
 import DeckBuilderCardTile from '@/components/deckbuilder/DeckBuilderCardTile.vue'
@@ -33,7 +36,6 @@ const props = defineProps<{ deckId?: string }>()
 const router = useRouter()
 const queryClient = useQueryClient()
 const { session } = useAuthUser()
-const userId = computed(() => session.value?.user.id)
 
 const isEditing = computed(() => !!props.deckId)
 
@@ -103,22 +105,13 @@ const { data: allCards, isPending: catalogueLoading } = useQuery({
 
 const mobilePanel = ref<'catalogue' | 'deck'>('catalogue')
 
-const { data: collection } = useQuery({
-  queryKey: computed(() => collectionKeys.mine(userId.value ?? '')),
-  queryFn: () => fetchMyCollection(userId.value!),
-  enabled: computed(() => !!userId.value),
-})
-const collectionMap = computed(() => collection.value ?? new Map<string, number>())
-const ownedOnly = ref(false)
+const { userId, collectionMap, ownedQuantity } = useMyCollection()
 
-function ownedQuantity(cardId: string) {
-  return collectionMap.value.get(cardId) ?? 0
-}
+const { filters, flags, reset: resetFilters } = useCardFiltersQuery({ flags: ['owned'] })
 
-const filters = ref(createEmptyCardFilters())
 const filteredCards = computed(() => {
   const base = filterAndSortCards(allCards.value ?? [], filters.value)
-  return ownedOnly.value ? base.filter((card) => collectionMap.value.has(card.id)) : base
+  return flags.owned ? base.filter((card) => collectionMap.value.has(card.id)) : base
 })
 
 const CATALOG_PAGE_SIZE = 20
@@ -129,7 +122,7 @@ const paginatedCards = computed(() => {
   return filteredCards.value.slice(start, start + CATALOG_PAGE_SIZE)
 })
 
-watch([filters, ownedOnly], () => {
+watch([filters, () => flags.owned], () => {
   catalogPage.value = 0
 })
 
@@ -142,7 +135,7 @@ function quantityInDeck(cardId: string) {
 }
 
 function exceedsOwnedQuantity(card: Card) {
-  return ownedOnly.value && (quantityInDeck(card.id) ?? 0) >= ownedQuantity(card.id)
+  return flags.owned && (quantityInDeck(card.id) ?? 0) >= ownedQuantity(card.id)
 }
 
 function isCardDisabled(card: Card) {
@@ -218,12 +211,12 @@ const saveMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: deckKeys.all })
     toast.success('Deck enregistré.')
     if (!props.deckId) {
-      router.replace({ name: 'deck-builder-edit', params: { deckId } })
+      router.replace({ name: 'deck-builder-edit', params: { deckId }, query: router.currentRoute.value.query })
     }
   },
   onError: (err) => {
-    error.value = err.message
-    toast.error(err.message)
+    error.value = toUserMessage(err)
+    toast.error(toUserMessage(err))
   },
 })
 
@@ -274,16 +267,23 @@ function onExport() {
         <CardFilters v-model="filters" :cards="allCards" class="mb-4">
           <template v-if="userId" #extra>
             <label class="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
-              <Checkbox :model-value="ownedOnly" @update:model-value="(v) => (ownedOnly = !!v)" />
+              <Checkbox :model-value="flags.owned" @update:model-value="(v) => (flags.owned = !!v)" />
               Cartes possédées uniquement
             </label>
           </template>
         </CardFilters>
-        <QueryState
-          :loading="catalogueLoading"
-          :empty="filteredCards.length === 0"
-          empty-message="Aucune carte ne correspond aux filtres."
-        >
+        <QueryState :loading="catalogueLoading" :empty="filteredCards.length === 0">
+          <template #loading>
+            <CardGridSkeleton
+              :count="20"
+              class="grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-5"
+            />
+          </template>
+          <template #empty>
+            <EmptyState title="Aucune carte" message="Aucune carte ne correspond à tes filtres.">
+              <Button variant="outline" size="sm" @click="resetFilters">Réinitialiser les filtres</Button>
+            </EmptyState>
+          </template>
           <div class="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-4 md:grid-cols-5">
             <div v-for="card in paginatedCards" :key="card.id">
               <DeckBuilderCardTile

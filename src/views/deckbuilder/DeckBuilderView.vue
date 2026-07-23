@@ -5,6 +5,7 @@ import { toast } from 'vue-sonner'
 import { PlusIcon } from '@lucide/vue'
 import { useAuthUser } from '@/composables/useAuthUser'
 import { SITE_NAME, SITE_URL, usePageSeo, useJsonLd } from '@/lib/seo'
+import { toUserMessage } from '@/lib/errorMessage'
 import type { DeckListQuery } from '@/types/deck'
 import { createEmptyDeckListQuery } from '@/types/deck'
 import {
@@ -135,7 +136,7 @@ const bookmarkMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: deckKeys.all })
   },
   onError: (err) => {
-    toast.error(err.message)
+    toast.error(toUserMessage(err))
   },
 })
 
@@ -156,7 +157,7 @@ const starMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: deckKeys.all })
   },
   onError: (err) => {
-    toast.error(err.message)
+    toast.error(toUserMessage(err))
   },
 })
 

@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Card } from '@/types/card'
 import type { CardWithSet } from '@/types/deck'
+import type { TablesInsert, TablesUpdate } from '@/types/database.types'
 
 export const cardKeys = {
   all: ['cards'] as const,
@@ -55,4 +56,19 @@ export async function fetchFeaturedCards(setId: string, limit: number): Promise<
     .limit(limit)
 
   return (data as Card[]) ?? []
+}
+
+export async function createCard(input: TablesInsert<'cards'>): Promise<void> {
+  const { error } = await supabase.from('cards').insert(input)
+  if (error) throw new Error(error.message)
+}
+
+export async function updateCard(id: string, input: TablesUpdate<'cards'>): Promise<void> {
+  const { error } = await supabase.from('cards').update(input).eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export async function deleteCard(id: string): Promise<void> {
+  const { error } = await supabase.from('cards').delete().eq('id', id)
+  if (error) throw new Error(error.message)
 }

@@ -15,7 +15,7 @@ const emit = defineEmits<{ 'toggle-owned': [] }>()
 
 <template>
   <RouterLink
-    :to="{ name: 'card', params: { setSlug: props.setSlug, cardNumber: props.card.number } }"
+    :to="{ name: 'card', params: { setSlug: props.setSlug, cardNumber: props.card.number }, query: $route.query }"
     class="group relative block select-none"
   >
     <CollectionOwnedBadge v-if="props.showCollectionToggle" :owned="props.owned" @toggle="emit('toggle-owned')" />

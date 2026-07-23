@@ -15,7 +15,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "gen:types": "bunx supabase gen types typescript --project-id qfgzjzrztprgbqfnjbaj --schema public > src/types/database.types.ts"
   },
   "dependencies": {
     "@fontsource/cinzel": "^5.2.8",
@@ -46,9 +48,9 @@
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.2",
     "@tanstack/vue-query-devtools": "^6.1.36",
-    "@types/dompurify": "^3.2.0",
     "@types/node": "^24.13.2",
     "@vitejs/plugin-vue": "^6.0.7",
+    "@vitest/coverage-v8": "4.1.10",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.9.0",
     "@vue/test-utils": "^2.4.11",

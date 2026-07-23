@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
-import { useAuthUser } from '@/composables/useAuthUser'
+import { useMyCollection } from '@/composables/useMyCollection'
 import { setKeys, fetchSets } from '@/queries/sets'
 import { cardKeys, fetchCardSetIndex } from '@/queries/cards'
-import { collectionKeys, fetchMyCollection } from '@/queries/collection'
 import type { SetCollectionProgress } from '@/types/collection'
+import { toUserMessage } from '@/lib/errorMessage'
 import { usePageSeo } from '@/lib/seo'
 import PageIntro from '@/components/common/PageIntro.vue'
 import CollectionSetProgress from '@/components/collection/CollectionSetProgress.vue'
 import QueryState from '@/components/common/QueryState.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import { Button } from '@/components/ui/button'
 
 usePageSeo({
   title: 'Ma collection',
@@ -17,8 +19,7 @@ usePageSeo({
   path: '/collection',
 })
 
-const { session } = useAuthUser()
-const userId = computed(() => session.value?.user.id)
+const { collectionMap, isLoading: collectionLoading, error: collectionError } = useMyCollection()
 
 const {
   data: sets,
@@ -38,26 +39,16 @@ const {
   queryFn: fetchCardSetIndex,
 })
 
-const {
-  data: collection,
-  isPending: collectionLoading,
-  error: collectionError,
-} = useQuery({
-  queryKey: computed(() => collectionKeys.mine(userId.value ?? '')),
-  queryFn: () => fetchMyCollection(userId.value!),
-  enabled: computed(() => !!userId.value),
+const loading = computed(() => setsLoading.value || cardsLoading.value || collectionLoading.value)
+const error = computed(() => {
+  const err = setsError.value ?? cardsError.value ?? collectionError.value
+  return err ? toUserMessage(err) : null
 })
 
-const loading = computed(() => setsLoading.value || cardsLoading.value || collectionLoading.value)
-const error = computed(
-  () => setsError.value?.message ?? cardsError.value?.message ?? collectionError.value?.message ?? null,
-)
-
 const progressBySet = computed<SetCollectionProgress[]>(() => {
-  const collectionMap = collection.value ?? new Map<string, number>()
   return (sets.value ?? []).map((set) => {
     const setCards = (allCards.value ?? []).filter((card) => card.set_id === set.id)
-    const owned = setCards.filter((card) => collectionMap.has(card.id)).length
+    const owned = setCards.filter((card) => collectionMap.value.has(card.id)).length
     return { set, owned, total: setCards.length }
   })
 })
@@ -76,12 +67,17 @@ const totalPercent = computed(() =>
     :description="`${totalOwned} / ${totalCards} cartes possédées — ${totalPercent}% de la collection complète.`"
   />
 
-  <QueryState
-    :loading="loading"
-    :error="error"
-    :empty="progressBySet.length === 0"
-    empty-message="Aucun set pour le moment."
-  >
+  <QueryState :loading="loading" :error="error" :empty="progressBySet.length === 0">
+    <template #empty>
+      <EmptyState
+        title="Rien à afficher"
+        message="Parcours les sets et coche les cartes que tu possèdes pour suivre ta collection."
+      >
+        <Button as-child variant="outline" size="sm">
+          <RouterLink :to="{ name: 'sets' }">Parcourir les sets</RouterLink>
+        </Button>
+      </EmptyState>
+    </template>
     <div class="flex flex-col gap-3">
       <CollectionSetProgress v-for="progress in progressBySet" :key="progress.set.id" :progress="progress" />
     </div>

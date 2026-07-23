@@ -3,7 +3,6 @@ import { computed, ref } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useForm } from '@tanstack/vue-form'
 import { CopyIcon, PencilIcon, PlusIcon, Trash2Icon, UploadIcon } from '@lucide/vue'
-import { supabase } from '@/lib/supabase'
 import { convertImageToWebP } from '@/lib/imageCompression'
 import { deleteCardImage, uploadCardImage } from '@/lib/cardImageStorage'
 import type { Card, CardType, Faction, Rarity, Subtype } from '@/types/card'
@@ -11,8 +10,8 @@ import { CARD_TYPES, FACTIONS, RARITIES, SUBTYPES, createEmptyCardFilters } from
 import { required, optionalNonNegativeNumber } from '@/lib/formValidators'
 import { filterAndSortCards } from '@/lib/filterCards'
 import { useSetBySlug } from '@/composables/useSetBySlug'
-import { cardKeys, fetchCardsBySet } from '@/queries/cards'
-import { setKeys } from '@/queries/sets'
+import { cardKeys, createCard, deleteCard, fetchCardsBySet, updateCard } from '@/queries/cards'
+import { setKeys, updateSetCardCount } from '@/queries/sets'
 import SelectField from '@/components/form/SelectField.vue'
 import type { SelectFieldOption } from '@/components/form/SelectField.vue'
 import BackButton from '@/components/common/BackButton.vue'
@@ -58,7 +57,7 @@ const sheetOpen = ref(false)
 
 async function syncCardCount(count: number) {
   if (!setId.value) return
-  await supabase.from('sets').update({ card_count: count }).eq('id', setId.value)
+  await updateSetCardCount(setId.value, count)
   queryClient.invalidateQueries({ queryKey: setKeys.all })
 }
 
@@ -220,11 +219,8 @@ const saveMutation = useMutation({
     }
 
     const isCreate = !editingId.value
-    const { error: saveError } = editingId.value
-      ? await supabase.from('cards').update(payload).eq('id', editingId.value)
-      : await supabase.from('cards').insert(payload)
-
-    if (saveError) throw new Error(saveError.message)
+    if (editingId.value) await updateCard(editingId.value, payload)
+    else await createCard(payload)
 
     if (image_url && editingImageUrl.value) {
       await deleteCardImage(editingImageUrl.value)
@@ -254,8 +250,7 @@ const form = useForm({
 
 const deleteMutation = useMutation({
   mutationFn: async (card: Card) => {
-    const { error: deleteError } = await supabase.from('cards').delete().eq('id', card.id)
-    if (deleteError) throw new Error(deleteError.message)
+    await deleteCard(card.id)
     await deleteCardImage(card.image_url)
   },
   onSuccess: async () => {

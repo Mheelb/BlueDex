@@ -33,6 +33,7 @@ onUnmounted(() => debouncer.cancel())
       :model-value="modelValue"
       type="search"
       :placeholder="placeholder"
+      :aria-label="placeholder ?? 'Rechercher'"
       class="pl-8"
       @update:model-value="debouncer.maybeExecute(String($event))"
     />

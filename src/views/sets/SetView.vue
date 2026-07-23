@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { toast } from 'vue-sonner'
-import { createEmptyCardFilters } from '@/types/card'
+import { computed } from 'vue'
+import { useQuery } from '@tanstack/vue-query'
 import { filterAndSortCards } from '@/lib/filterCards'
-import { useAuthUser } from '@/composables/useAuthUser'
+import { toUserMessage } from '@/lib/errorMessage'
+import { useCardFiltersQuery } from '@/composables/useCardFiltersQuery'
+import { useMyCollection } from '@/composables/useMyCollection'
 import { useSetBySlug } from '@/composables/useSetBySlug'
 import { cardKeys, fetchCardsBySet } from '@/queries/cards'
-import { collectionKeys, fetchMyCollection, toggleCollectionOwned } from '@/queries/collection'
 import { usePageSeo } from '@/lib/seo'
 import { cdnImage } from '@/lib/imageCdn'
 import CardFilters from '@/components/cards/CardFilters.vue'
 import CardTile from '@/components/cards/CardTile.vue'
+import CardGridSkeleton from '@/components/cards/CardGridSkeleton.vue'
 import VirtualCardGrid from '@/components/cards/VirtualCardGrid.vue'
 import BackButton from '@/components/common/BackButton.vue'
 import QueryState from '@/components/common/QueryState.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import Heading from '@/components/common/Heading.vue'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 
 const props = defineProps<{ setSlug: string }>()
@@ -34,51 +36,24 @@ const {
 })
 
 const loading = computed(() => setLoading.value || (!!setId.value && cardsLoading.value))
-const error = computed(() => setError.value?.message ?? cardsError.value?.message ?? null)
-
-const filters = ref(createEmptyCardFilters())
-const missingOnly = ref(false)
-watch(
-  () => props.setSlug,
-  () => {
-    filters.value = createEmptyCardFilters()
-    missingOnly.value = false
-  },
-)
-
-const { session } = useAuthUser()
-const userId = computed(() => session.value?.user.id)
-const queryClient = useQueryClient()
-
-const { data: collection } = useQuery({
-  queryKey: computed(() => collectionKeys.mine(userId.value ?? '')),
-  queryFn: () => fetchMyCollection(userId.value!),
-  enabled: computed(() => !!userId.value),
+const error = computed(() => {
+  const err = setError.value ?? cardsError.value
+  return err ? toUserMessage(err) : null
 })
 
-const collectionMap = computed(() => collection.value ?? new Map<string, number>())
+const { filters, flags, reset: resetFilters } = useCardFiltersQuery({ flags: ['missing'] })
+
+const { userId, collectionMap, toggleOwned } = useMyCollection()
+
 const ownedInSet = computed(() => (cards.value ?? []).filter((card) => collectionMap.value.has(card.id)).length)
 
 const filteredCards = computed(() => {
   const base = filterAndSortCards(cards.value ?? [], filters.value)
-  return missingOnly.value ? base.filter((card) => !collectionMap.value.has(card.id)) : base
-})
-
-const toggleOwnedMutation = useMutation({
-  mutationFn: (cardId: string) => {
-    if (!userId.value) throw new Error('Connecte-toi pour gérer ta collection.')
-    return toggleCollectionOwned(userId.value, cardId, !collectionMap.value.has(cardId))
-  },
-  onSuccess: () => {
-    if (userId.value) queryClient.invalidateQueries({ queryKey: collectionKeys.mine(userId.value) })
-  },
-  onError: (err) => {
-    toast.error(err.message)
-  },
+  return flags.missing ? base.filter((card) => !collectionMap.value.has(card.id)) : base
 })
 
 function onToggleOwned(cardId: string) {
-  toggleOwnedMutation.mutate(cardId)
+  toggleOwned(cardId, !collectionMap.value.has(cardId))
 }
 
 usePageSeo({
@@ -116,17 +91,20 @@ usePageSeo({
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <CardFilters v-model="filters" :cards="cards" class="w-full sm:flex-1" />
       <label v-if="userId" class="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
-        <Checkbox :model-value="missingOnly" @update:model-value="(v) => (missingOnly = !!v)" />
+        <Checkbox :model-value="flags.missing" @update:model-value="(v) => (flags.missing = !!v)" />
         Cartes manquantes uniquement
       </label>
     </div>
 
-    <QueryState
-      :loading="loading"
-      :error="error"
-      :empty="filteredCards.length === 0"
-      empty-message="Aucune carte ne correspond aux filtres."
-    >
+    <QueryState :loading="loading" :error="error" :empty="filteredCards.length === 0">
+      <template #loading>
+        <CardGridSkeleton />
+      </template>
+      <template #empty>
+        <EmptyState title="Aucune carte" message="Aucune carte ne correspond à tes filtres.">
+          <Button variant="outline" size="sm" @click="resetFilters">Réinitialiser les filtres</Button>
+        </EmptyState>
+      </template>
       <VirtualCardGrid :cards="filteredCards">
         <template #default="{ card }">
           <CardTile

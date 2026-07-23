@@ -30,3 +30,4 @@ dist-ssr
 
 # Vitest coverage
 coverage
+supabase/.temp/

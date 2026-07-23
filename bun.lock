@@ -7,7 +7,7 @@
       "dependencies": {
         "@fontsource/cinzel": "^5.2.8",
         "@fontsource/inter": "^5.2.8",
-        "@fontsource/pirata-one": "^5.2.8",
+        "@fontsource/pirata-one": "^5.3.0",
         "@lucide/vue": "^1.24.0",
         "@supabase/supabase-js": "^2.110.2",
         "@tanstack/pacer": "^0.21.1",
@@ -125,7 +125,7 @@
 
     "@fontsource/inter": ["@fontsource/inter@5.2.8", "", {}, "sha512-P6r5WnJoKiNVV+zvW2xM13gNdFhAEpQ9dQJHt3naLvfg+LkF2ldgSLiF4T41lf1SQCM9QmkqPTn4TH568IRagg=="],
 
-    "@fontsource/pirata-one": ["@fontsource/pirata-one@5.2.8", "", {}, "sha512-hl3Zqt6mgP+jstHnv2qYc2xQdYM1DSYrpSU9bpS1fYExoGFgJJNbXTPBQ9XivNk9RCKkibhou3iqoOZQOXM48w=="],
+    "@fontsource/pirata-one": ["@fontsource/pirata-one@5.3.0", "", {}, "sha512-qeaDy+F+TcCVdODaIvD4U0ZoaWPejpkXwHAAHIBtauwP/9mf+Sj8ORX5UYcnBpnyhd7ihYPpW+WWPbz9FryrJQ=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.2", "", { "dependencies": { "@humanfs/types": "^0.15.0" } }, "sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA=="],
 
